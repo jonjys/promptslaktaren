@@ -9,17 +9,36 @@ import {
   type KeyMeta,
 } from "@/lib/secure-store";
 import { registerBridgeSW, proveLock } from "@/lib/bridge-client";
+import {
+  getRadarConfig,
+  setMonthlyBudget,
+  armKillSwitch,
+  disarmKillSwitch,
+  listUsage,
+  monthSpendCents,
+  type RadarConfig,
+  type UsageEvent,
+} from "@/lib/cost-radar";
 
 export default function Home() {
   const [keys, setKeys] = useState<KeyMeta[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [paste, setPaste] = useState("");
   const [busy, setBusy] = useState(false);
-  const [proxyLog, setProxyLog] = useState<string | null>(null);
+  const [log, setLog] = useState<string | null>(null);
+  const [cfg, setCfg] = useState<RadarConfig | null>(null);
+  const [spend, setSpend] = useState(0);
+  const [events, setEvents] = useState<UsageEvent[]>([]);
+  const [budgetInput, setBudgetInput] = useState("50");
 
   const refresh = useCallback(async () => {
     try {
       setKeys(await listKeys());
+      const c = await getRadarConfig();
+      setCfg(c);
+      setBudgetInput(String(c.monthlyBudgetCents / 100));
+      setSpend(await monthSpendCents());
+      setEvents(await listUsage(20));
     } catch {
       setKeys([]);
     }
@@ -35,12 +54,16 @@ export default function Home() {
     [keys]
   );
 
+  const budgetPct = cfg
+    ? Math.min(100, (spend / Math.max(1, cfg.monthlyBudgetCents)) * 100)
+    : 0;
+
   async function onImportFile() {
     setBusy(true);
     setStatus(null);
     try {
       const imported = await pickAndImportEnv();
-      setStatus(`Imported ${imported.length} key(s). Values stay on this device.`);
+      setStatus(`Welded ${imported.length} key(s). Never left this device.`);
       await refresh();
     } catch (e) {
       setStatus(e instanceof Error ? e.message : "Import failed");
@@ -55,7 +78,7 @@ export default function Home() {
     setStatus(null);
     try {
       const imported = await importEnvText(paste);
-      setStatus(`Imported ${imported.length} key(s). Values stay on this device.`);
+      setStatus(`Welded ${imported.length} key(s). Never left this device.`);
       setPaste("");
       await refresh();
     } catch (e) {
@@ -65,67 +88,74 @@ export default function Home() {
     }
   }
 
-  async function onDelete(id: string) {
-    await deleteKey(id);
-    await refresh();
-  }
-
-  async function onProveLock(k: KeyMeta) {
-    setProxyLog(null);
+  async function onProve(k: KeyMeta) {
+    setLog(null);
     setBusy(true);
     try {
       const r = await proveLock(k.id);
-      setProxyLog(
-        `LOCKED OK · ${k.name} · decrypt ${r.ms}ms · secret length ${r.len} (not shown) · usage +1`
+      setLog(
+        r.autoKilled
+          ? `AUTO-KILL · budget exceeded after this use`
+          : `LOCKED OK · ${k.name} · ${r.ms}ms · len ${r.len} (hidden) · usage+1`
       );
       await refresh();
     } catch (e) {
-      setProxyLog(e instanceof Error ? e.message : "Lock test failed");
+      setLog(e instanceof Error ? e.message : "Failed");
     } finally {
       setBusy(false);
     }
   }
 
+  async function onSaveBudget() {
+    const dollars = Number(budgetInput);
+    if (Number.isNaN(dollars) || dollars < 0) return;
+    await setMonthlyBudget(Math.round(dollars * 100));
+    await refresh();
+  }
+
   return (
     <div className="flex flex-col flex-1">
       <header className="border-b border-zinc-800 bg-zinc-950/90 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="font-bold text-xl tracking-tight text-white">
             Bridge<span className="text-emerald-400">Control</span>
           </div>
-          <span className="text-xs text-zinc-500 font-mono">
-            {totalCalls} locked uses · local only
-          </span>
+          <div className="flex items-center gap-3 text-xs font-mono">
+            {cfg?.killed ? (
+              <span className="text-red-400 animate-pulse">KILL SWITCH ON</span>
+            ) : (
+              <span className="text-zinc-500">
+                {totalCalls} uses · est ${(spend / 100).toFixed(2)}/mo
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-16 max-w-3xl mx-auto w-full">
-        <section className="text-center mb-14">
-          <p className="text-emerald-400 text-sm font-semibold tracking-wide mb-3">
-            🔒 + 🌉
+      <main className="flex-1 px-4 py-12 max-w-3xl mx-auto w-full space-y-12">
+        {/* Hero */}
+        <section className="text-center">
+          <p className="text-emerald-400 text-sm font-semibold mb-3">
+            zero-trust · local-first · kill-switch
           </p>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
-            Your .env file is a liability.
+            Keys never leave.
             <br />
-            <span className="text-emerald-400">We fixed it.</span>
+            <span className="text-emerald-400">Spend never surprises.</span>
           </h1>
           <p className="text-lg text-zinc-400 max-w-xl mx-auto">
-            Your API keys never leave your machine. Zero-trust local proxy with
-            Web Locks + File System Access. Usage metered. No key on our servers.
+            Weld every .env into an encrypted on-device store. Web Locks for
+            exclusive use. CostRadar kills traffic when budget is hit. No secret
+            on our servers — ever.
           </p>
         </section>
 
-        <section className="grid sm:grid-cols-3 gap-4 mb-12 text-center">
+        {/* Triple feature */}
+        <section className="grid sm:grid-cols-3 gap-3 text-center">
           {[
-            { t: "Zero-leak", d: "Encrypted on-device. Never uploaded." },
-            { t: "Locked use", d: "Web Locks: one process per key." },
-            {
-              t: "Usage meter",
-              d:
-                totalCalls > 0
-                  ? `${totalCalls} locked uses on this device`
-                  : "See cost before the bill hits.",
-            },
+            { t: "Weld", d: "Import .env → AES-GCM. Masked only." },
+            { t: "Lock", d: "Web Locks. One process. ~50ms plaintext." },
+            { t: "Kill", d: "Budget hit → all keys blocked locally." },
           ].map((f) => (
             <div
               key={f.t}
@@ -137,49 +167,140 @@ export default function Home() {
           ))}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6 mb-10">
+        {/* CostRadar panel */}
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">CostRadar</h2>
+            {cfg?.killed ? (
+              <button
+                onClick={async () => {
+                  await disarmKillSwitch();
+                  await refresh();
+                  setLog("Kill switch disarmed");
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 border border-red-500/40"
+              >
+                Disarm kill switch
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  await armKillSwitch("Manual arm");
+                  await refresh();
+                  setLog("Kill switch ARMED — all prove-lock blocked");
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400"
+              >
+                Arm kill switch
+              </button>
+            )}
+          </div>
+
+          <div className="mb-3 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-2xl font-bold text-white">
+                ${(spend / 100).toFixed(2)}
+                <span className="text-sm font-normal text-zinc-500">
+                  {" "}
+                  / ${(cfg?.monthlyBudgetCents || 0) / 100} budget
+                </span>
+              </p>
+              <p className="text-xs text-zinc-500 mt-1">
+                Estimated local meter (demo rates). Not billed to card yet.
+              </p>
+            </div>
+            <div className="flex gap-2 items-center">
+              <span className="text-xs text-zinc-500">$</span>
+              <input
+                value={budgetInput}
+                onChange={(e) => setBudgetInput(e.target.value)}
+                className="w-20 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-sm text-white"
+              />
+              <button
+                onClick={onSaveBudget}
+                className="text-xs px-2 py-1 rounded-lg bg-zinc-800 text-emerald-400"
+              >
+                Set
+              </button>
+            </div>
+          </div>
+
+          <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
+            <div
+              className={`h-full transition-all ${
+                budgetPct >= 100
+                  ? "bg-red-500"
+                  : budgetPct >= 80
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+              }`}
+              style={{ width: `${budgetPct}%` }}
+            />
+          </div>
+
+          {cfg?.killed && (
+            <p className="mt-3 text-sm text-red-400">
+              {cfg.killReason || "Kill switch active"}
+            </p>
+          )}
+
+          {events.length > 0 && (
+            <ul className="mt-4 space-y-1 max-h-32 overflow-y-auto">
+              {events.map((e) => (
+                <li
+                  key={e.id}
+                  className="text-xs font-mono text-zinc-500 flex justify-between"
+                >
+                  <span>
+                    {e.provider} · {new Date(e.at).toLocaleTimeString()}
+                  </span>
+                  <span>~${(e.estimatedCents / 100).toFixed(3)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* Import */}
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
           <h2 className="text-lg font-semibold text-white mb-4">
-            Connect .env in 10 seconds
+            Weld .env in 10 seconds
           </h2>
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <button
               onClick={onImportFile}
               disabled={busy}
-              className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold disabled:opacity-50 transition"
+              className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold disabled:opacity-50"
             >
               {busy ? "Working…" : "Import .env"}
             </button>
             <span className="text-zinc-600 text-sm self-center">
-              Chrome / Edge · File System Access API
+              Chrome / Edge · File System Access
             </span>
           </div>
-          <p className="text-xs text-zinc-500 mb-2">
-            Or paste .env content (fallback):
-          </p>
           <textarea
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
             placeholder={"STRIPE_SECRET_KEY=sk_test_...\nOPENAI_API_KEY=sk-..."}
-            className="w-full h-28 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-emerald-500"
+            className="w-full h-24 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-emerald-500"
           />
           <button
             onClick={onImportPaste}
             disabled={busy || !paste.trim()}
             className="mt-3 px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:border-emerald-500 disabled:opacity-40"
           >
-            Import pasted keys
+            Weld pasted keys
           </button>
-          {status && (
-            <p className="mt-3 text-sm text-emerald-400/90">{status}</p>
-          )}
+          {status && <p className="mt-3 text-sm text-emerald-400">{status}</p>}
         </section>
 
+        {/* Keys */}
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">
-            Secured keys on this device
+            Secured keys (this device only)
           </h2>
           {keys.length === 0 ? (
-            <p className="text-zinc-500 text-sm">No keys yet. Import a .env.</p>
+            <p className="text-zinc-500 text-sm">No keys. Weld a .env.</p>
           ) : (
             <ul className="space-y-2">
               {keys.map((k) => (
@@ -192,19 +313,22 @@ export default function Home() {
                       {k.name}
                     </div>
                     <div className="text-xs text-zinc-500 font-mono">
-                      {k.provider} · {k.masked} · used {k.usageCount}×
+                      {k.provider} · {k.masked} · {k.usageCount}×
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => onProveLock(k)}
-                      disabled={busy}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-400 hover:bg-zinc-700 disabled:opacity-40"
+                      onClick={() => onProve(k)}
+                      disabled={busy || !!cfg?.killed}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-400 disabled:opacity-30"
                     >
                       Prove lock
                     </button>
                     <button
-                      onClick={() => onDelete(k.id)}
+                      onClick={async () => {
+                        await deleteKey(k.id);
+                        await refresh();
+                      }}
                       className="text-xs text-zinc-500 hover:text-red-400"
                     >
                       Remove
@@ -214,22 +338,44 @@ export default function Home() {
               ))}
             </ul>
           )}
-          {proxyLog && (
-            <pre className="mt-4 text-xs text-emerald-400/90 bg-zinc-900 border border-zinc-800 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">
-              {proxyLog}
+          {log && (
+            <pre className="mt-4 text-xs text-emerald-400/90 bg-zinc-900 border border-zinc-800 rounded-xl p-3 whitespace-pre-wrap">
+              {log}
             </pre>
           )}
-          <p className="mt-4 text-xs text-zinc-600">
-            Prove lock = exclusive Web Lock + decrypt + discard. Secret never
-            rendered, never POSTed to our origin. Upstream SW proxy is ready for
-            providers that allow browser CORS or extension mode.
-          </p>
         </section>
-      </main>
 
-      <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-600">
-        BridgeControl · Your API keys never leave your machine.
-      </footer>
-    </div>
-  );
-}
+        {/* Pricing */}
+        <section className="rounded-2xl border border-zinc-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 text-center">
+            Pricing (coming online)
+          </h2>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {[
+              { name: "Indie", price: "99 kr", d: "5 keys · local radar" },
+              {
+                name: "Startup",
+                price: "999 kr",
+                d: "50 keys · audit · kill policies",
+              },
+              {
+                name: "Enterprise",
+                price: "9999 kr",
+                d: "Unlimited · 2% take on proxied traffic",
+              },
+            ].map((p) => (
+              <div
+                key={p.name}
+                className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 text-center"
+              >
+                <p className="text-zinc-400 text-sm">{p.name}</p>
+                <p className="text-xl font-bold text-white my-1">{p.price}</p>
+                <p className="text-xs text-zinc-500">{p.d}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="text-center text-xs text-zinc-600 pb-8">
+          <p>
+            Show HN angle:{
