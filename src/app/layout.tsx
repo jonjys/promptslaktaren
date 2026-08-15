@@ -13,14 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PromptSlaktaren \u2013 Write one word. Get an app.",
+  title: "BridgeControl — Your API keys never leave your machine",
   description:
-    "One word \u2192 15-point prompt for Claude, Grok, Meta AI, Venice AI. Next.js + Supabase + Stripe. EN & SV. Top of funnel for Fred-platform.",
+    "Zero-trust local-first API gateway. File System Access + Web Locks + WebCrypto. Keys stay on device. Usage metered.",
   metadataBase: new URL("https://promptslaktaren.vercel.app"),
   openGraph: {
-    title: "PromptSlaktaren \u2013 Write one word. Get an app.",
+    title: "BridgeControl — Your API keys never leave your machine",
     description:
-      "One word \u2192 15-point prompt. Copy-paste into any AI and ship. Part of the Fred ecosystem.",
+      "Zero-trust API gateway that runs in your browser. No key on our servers.",
     type: "website",
   },
 };
@@ -35,7 +35,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100">
         {children}
       </body>
     </html>
