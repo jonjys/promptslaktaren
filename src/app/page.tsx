@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   pickAndImportEnv,
   importEnvText,
@@ -8,13 +8,14 @@ import {
   deleteKey,
   type KeyMeta,
 } from "@/lib/secure-store";
-import { registerBridgeSW } from "@/lib/bridge-client";
+import { registerBridgeSW, proxyUrl } from "@/lib/bridge-client";
 
 export default function Home() {
   const [keys, setKeys] = useState<KeyMeta[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [paste, setPaste] = useState("");
   const [busy, setBusy] = useState(false);
+  const [proxyLog, setProxyLog] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -28,6 +29,11 @@ export default function Home() {
     void registerBridgeSW();
     void refresh();
   }, [refresh]);
+
+  const totalCalls = useMemo(
+    () => keys.reduce((n, k) => n + (k.usageCount || 0), 0),
+    [keys]
+  );
 
   async function onImportFile() {
     setBusy(true);
@@ -64,6 +70,35 @@ export default function Home() {
     await refresh();
   }
 
+  async function onTestProxy(k: KeyMeta) {
+    setProxyLog(null);
+    setBusy(true);
+    try {
+      // Stripe balance is a cheap authenticated read when key is valid
+      const path =
+        k.provider === "stripe"
+          ? "v1/balance"
+          : k.provider === "openai"
+            ? "v1/models"
+            : "";
+      if (!path) {
+        setProxyLog("No demo path for this provider yet.");
+        return;
+      }
+      const url = proxyUrl(k.provider, k.id, path);
+      const res = await fetch(url, { method: "GET" });
+      const text = await res.text();
+      setProxyLog(
+        `${k.provider} → ${res.status} · ${text.slice(0, 180)}${text.length > 180 ? "…" : ""}`
+      );
+      await refresh();
+    } catch (e) {
+      setProxyLog(e instanceof Error ? e.message : "Proxy failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col flex-1">
       <header className="border-b border-zinc-800 bg-zinc-950/90 backdrop-blur sticky top-0 z-10">
@@ -72,7 +107,7 @@ export default function Home() {
             Bridge<span className="text-emerald-400">Control</span>
           </div>
           <span className="text-xs text-zinc-500 font-mono">
-            zero-trust · local-first
+            {totalCalls} proxied calls · local only
           </span>
         </div>
       </header>
@@ -97,7 +132,13 @@ export default function Home() {
           {[
             { t: "Zero-leak", d: "Encrypted on-device. Never uploaded." },
             { t: "Locked use", d: "Web Locks: one process per key." },
-            { t: "Usage meter", d: "See cost before the bill hits." },
+            {
+              t: "Usage meter",
+              d:
+                totalCalls > 0
+                  ? `${totalCalls} calls on this device`
+                  : "See cost before the bill hits.",
+            },
           ].map((f) => (
             <div
               key={f.t}
@@ -131,7 +172,7 @@ export default function Home() {
           <textarea
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
-            placeholder={"STRIPE_SECRET_KEY=sk_live_...\nOPENAI_API_KEY=sk-..."}
+            placeholder={"STRIPE_SECRET_KEY=sk_test_...\nOPENAI_API_KEY=sk-..."}
             className="w-full h-28 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-emerald-500"
           />
           <button
@@ -157,7 +198,7 @@ export default function Home() {
               {keys.map((k) => (
                 <li
                   key={k.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/80 px-4 py-3"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/80 px-4 py-3"
                 >
                   <div className="min-w-0">
                     <div className="font-medium text-zinc-200 truncate">
@@ -167,19 +208,36 @@ export default function Home() {
                       {k.provider} · {k.masked} · used {k.usageCount}×
                     </div>
                   </div>
-                  <button
-                    onClick={() => onDelete(k.id)}
-                    className="text-xs text-zinc-500 hover:text-red-400 shrink-0"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center gap-3 shrink-0">
+                    {(k.provider === "stripe" || k.provider === "openai") && (
+                      <button
+                        onClick={() => onTestProxy(k)}
+                        disabled={busy}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-400 hover:bg-zinc-700 disabled:opacity-40"
+                      >
+                        Test proxy
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onDelete(k.id)}
+                      className="text-xs text-zinc-500 hover:text-red-400"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
+          {proxyLog && (
+            <pre className="mt-4 text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">
+              {proxyLog}
+            </pre>
+          )}
           <p className="mt-4 text-xs text-zinc-600">
             Plaintext values are never shown. Decrypt happens only under Web Lock
-            for a single proxied request.
+            for a single proxied request. Network tab should show no secret on our
+            origin — only Authorization to the upstream host via SW.
           </p>
         </section>
       </main>
