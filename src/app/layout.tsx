@@ -13,14 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BridgeControl — Your API keys never leave your machine",
+  title: "BridgeControl — Keys never leave. Spend never surprises.",
   description:
-    "Zero-trust local-first API gateway. File System Access + Web Locks + WebCrypto. Keys stay on device. Usage metered.",
+    "Zero-trust local-first API gateway + CostRadar kill-switch. Web Locks, File System Access, AES-GCM. Secrets never hit our servers.",
   metadataBase: new URL("https://promptslaktaren.vercel.app"),
+  manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "BridgeControl — Your API keys never leave your machine",
+    title: "BridgeControl — Keys never leave. Spend never surprises.",
     description:
-      "Zero-trust API gateway that runs in your browser. No key on our servers.",
+      "Weld .env on-device. Web Locks. Budget kill-switch. No secret on our servers.",
     type: "website",
   },
 };
