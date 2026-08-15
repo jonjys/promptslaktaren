@@ -16,24 +16,25 @@ export async function registerBridgeSW(): Promise<void> {
     if (data.type === "NEED_AUTH") {
       const { requestId, keyId } = data;
       try {
-        // Exclusive lock per key — only one concurrent use
         await navigator.locks.request(
           `bc-key-${keyId}`,
           { mode: "exclusive" },
           async () => {
             const value = await unlockKeyValue(keyId);
-            const authorization = value.startsWith("Bearer ")
-              ? value
-              : `Bearer ${value}`;
-            // Stripe expects Bearer for secret keys in some flows;
-            // for Stripe secret key Basic auth is also common — keep Bearer default.
-            const sw = navigator.serviceWorker.controller;
-            sw?.postMessage({
+            // Stripe secret keys use Basic base64(sk:)
+            let authorization: string;
+            if (value.startsWith("sk_") && !value.includes(" ")) {
+              authorization = `Bearer ${value}`;
+            } else if (value.startsWith("Bearer ")) {
+              authorization = value;
+            } else {
+              authorization = `Bearer ${value}`;
+            }
+            navigator.serviceWorker.controller?.postMessage({
               type: "PROXY_AUTH",
               requestId,
               authorization,
             });
-            // Key plaintext only lived in this closure
           }
         );
       } catch {
@@ -52,8 +53,31 @@ export async function registerBridgeSW(): Promise<void> {
   void reg;
 }
 
-/** Call an upstream provider through the local SW proxy. Key never hits our server. */
 export function proxyUrl(provider: string, keyId: string, path: string): string {
   const clean = path.replace(/^\//, "");
   return `/api/proxy/${provider}/${keyId}/${clean}`;
+}
+
+/**
+ * Prove zero-trust unlock path without upstream CORS.
+ * Holds exclusive Web Lock, decrypts, discards plaintext, bumps usage.
+ */
+export async function proveLock(keyId: string): Promise<{
+  ok: boolean;
+  ms: number;
+  len: number;
+}> {
+  const t0 = performance.now();
+  let len = 0;
+  await navigator.locks.request(
+    `bc-key-${keyId}`,
+    { mode: "exclusive" },
+    async () => {
+      const value = await unlockKeyValue(keyId);
+      len = value.length;
+      // intentional: value goes out of scope — never logged, never sent
+    }
+  );
+  await bumpUsage(keyId);
+  return { ok: true, ms: Math.round(performance.now() - t0), len };
 }
