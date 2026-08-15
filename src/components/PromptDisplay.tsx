@@ -5,9 +5,20 @@ import { useState } from "react";
 interface PromptDisplayProps {
   prompt: string;
   word: string;
+  promptForLabel: string;
+  copyAllLabel: string;
+  copiedLabel: string;
+  copyPointLabel: string;
 }
 
-export function PromptDisplay({ prompt, word }: PromptDisplayProps) {
+export function PromptDisplay({
+  prompt,
+  word,
+  promptForLabel,
+  copyAllLabel,
+  copiedLabel,
+  copyPointLabel,
+}: PromptDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -29,15 +40,16 @@ export function PromptDisplay({ prompt, word }: PromptDisplayProps) {
 
   return (
     <div className="w-full max-w-4xl mx-auto mt-10">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="text-2xl font-bold">
-          15-punkts prompt för <span className="text-emerald-500">{word}</span>
+          {promptForLabel}{" "}
+          <span className="text-emerald-500">{word}</span>
         </h2>
         <button
           onClick={copyAll}
-          className="px-5 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold hover:opacity-90 transition"
+          className="px-5 py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold hover:opacity-90 transition shrink-0"
         >
-          {copied ? "✓ Kopierad!" : "Kopiera hela prompten"}
+          {copied ? copiedLabel : copyAllLabel}
         </button>
       </div>
 
@@ -50,7 +62,7 @@ export function PromptDisplay({ prompt, word }: PromptDisplayProps) {
       {points.length > 0 && (
         <div className="mt-8 space-y-3">
           <h3 className="text-lg font-semibold text-zinc-600 dark:text-zinc-400">
-            Kopiera enskilda punkter
+            {copyPointLabel}
           </h3>
           {points.map((point, i) => (
             <div
@@ -61,7 +73,7 @@ export function PromptDisplay({ prompt, word }: PromptDisplayProps) {
                 onClick={() => copyPoint(point, i)}
                 className="shrink-0 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition"
               >
-                {copiedIndex === i ? "✓" : "Kopiera"}
+                {copiedIndex === i ? "\u2713" : copyPointLabel}
               </button>
               <p className="text-sm text-zinc-700 dark:text-zinc-300">{point}</p>
             </div>
