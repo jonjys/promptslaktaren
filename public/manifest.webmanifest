@@ -1,0 +1,10 @@
+{
+  "name": "BridgeControl",
+  "short_name": "BridgeControl",
+  "description": "Keys never leave. Spend never surprises.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#10b981",
+  "lang": "en"
+}
