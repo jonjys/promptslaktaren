@@ -95,7 +95,7 @@ export default function Home() {
       const r = await proveLock(k.id);
       setLog(
         r.autoKilled
-          ? `AUTO-KILL · budget exceeded after this use`
+          ? "AUTO-KILL · budget exceeded after this use"
           : `LOCKED OK · ${k.name} · ${r.ms}ms · len ${r.len} (hidden) · usage+1`
       );
       await refresh();
@@ -133,7 +133,6 @@ export default function Home() {
       </header>
 
       <main className="flex-1 px-4 py-12 max-w-3xl mx-auto w-full space-y-12">
-        {/* Hero */}
         <section className="text-center">
           <p className="text-emerald-400 text-sm font-semibold mb-3">
             zero-trust · local-first · kill-switch
@@ -146,16 +145,15 @@ export default function Home() {
           <p className="text-lg text-zinc-400 max-w-xl mx-auto">
             Weld every .env into an encrypted on-device store. Web Locks for
             exclusive use. CostRadar kills traffic when budget is hit. No secret
-            on our servers — ever.
+            on our servers.
           </p>
         </section>
 
-        {/* Triple feature */}
         <section className="grid sm:grid-cols-3 gap-3 text-center">
           {[
-            { t: "Weld", d: "Import .env → AES-GCM. Masked only." },
+            { t: "Weld", d: "Import .env to AES-GCM. Masked only." },
             { t: "Lock", d: "Web Locks. One process. ~50ms plaintext." },
-            { t: "Kill", d: "Budget hit → all keys blocked locally." },
+            { t: "Kill", d: "Budget hit then all keys blocked locally." },
           ].map((f) => (
             <div
               key={f.t}
@@ -167,12 +165,12 @@ export default function Home() {
           ))}
         </section>
 
-        {/* CostRadar panel */}
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">CostRadar</h2>
             {cfg?.killed ? (
               <button
+                type="button"
                 onClick={async () => {
                   await disarmKillSwitch();
                   await refresh();
@@ -184,10 +182,11 @@ export default function Home() {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={async () => {
                   await armKillSwitch("Manual arm");
                   await refresh();
-                  setLog("Kill switch ARMED — all prove-lock blocked");
+                  setLog("Kill switch ARMED");
                 }}
                 className="text-xs px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400"
               >
@@ -196,17 +195,16 @@ export default function Home() {
             )}
           </div>
 
-          <div className="mb-3 flex items-end justify-between gap-4">
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-2xl font-bold text-white">
                 ${(spend / 100).toFixed(2)}
                 <span className="text-sm font-normal text-zinc-500">
-                  {" "}
-                  / ${(cfg?.monthlyBudgetCents || 0) / 100} budget
+                  {" "}/ ${(cfg?.monthlyBudgetCents || 0) / 100} budget
                 </span>
               </p>
               <p className="text-xs text-zinc-500 mt-1">
-                Estimated local meter (demo rates). Not billed to card yet.
+                Local estimate meter. Card billing later.
               </p>
             </div>
             <div className="flex gap-2 items-center">
@@ -217,6 +215,7 @@ export default function Home() {
                 className="w-20 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-sm text-white"
               />
               <button
+                type="button"
                 onClick={onSaveBudget}
                 className="text-xs px-2 py-1 rounded-lg bg-zinc-800 text-emerald-400"
               >
@@ -249,7 +248,7 @@ export default function Home() {
               {events.map((e) => (
                 <li
                   key={e.id}
-                  className="text-xs font-mono text-zinc-500 flex justify-between"
+                  className="text-xs font-mono text-zinc-500 flex justify-between gap-2"
                 >
                   <span>
                     {e.provider} · {new Date(e.at).toLocaleTimeString()}
@@ -261,13 +260,13 @@ export default function Home() {
           )}
         </section>
 
-        {/* Import */}
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
           <h2 className="text-lg font-semibold text-white mb-4">
             Weld .env in 10 seconds
           </h2>
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <button
+              type="button"
               onClick={onImportFile}
               disabled={busy}
               className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold disabled:opacity-50"
@@ -285,6 +284,7 @@ export default function Home() {
             className="w-full h-24 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-emerald-500"
           />
           <button
+            type="button"
             onClick={onImportPaste}
             disabled={busy || !paste.trim()}
             className="mt-3 px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:border-emerald-500 disabled:opacity-40"
@@ -294,7 +294,6 @@ export default function Home() {
           {status && <p className="mt-3 text-sm text-emerald-400">{status}</p>}
         </section>
 
-        {/* Keys */}
         <section>
           <h2 className="text-lg font-semibold text-white mb-3">
             Secured keys (this device only)
@@ -313,11 +312,12 @@ export default function Home() {
                       {k.name}
                     </div>
                     <div className="text-xs text-zinc-500 font-mono">
-                      {k.provider} · {k.masked} · {k.usageCount}×
+                      {k.provider} · {k.masked} · {k.usageCount}x
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={() => onProve(k)}
                       disabled={busy || !!cfg?.killed}
                       className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-400 disabled:opacity-30"
@@ -325,6 +325,7 @@ export default function Home() {
                       Prove lock
                     </button>
                     <button
+                      type="button"
                       onClick={async () => {
                         await deleteKey(k.id);
                         await refresh();
@@ -345,7 +346,6 @@ export default function Home() {
           )}
         </section>
 
-        {/* Pricing */}
         <section className="rounded-2xl border border-zinc-800 p-6">
           <h2 className="text-lg font-semibold text-white mb-4 text-center">
             Pricing (coming online)
@@ -378,4 +378,15 @@ export default function Home() {
 
         <section className="text-center text-xs text-zinc-600 pb-8">
           <p>
-            Show HN angle:{
+            Show HN: We stopped API key leaks by never letting the key leave the
+            machine (Web Locks + File System Access + kill switch)
+          </p>
+        </section>
+      </main>
+
+      <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-600">
+        BridgeControl · Keys never leave · Spend never surprises
+      </footer>
+    </div>
+  );
+}
