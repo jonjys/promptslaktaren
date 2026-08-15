@@ -1,50 +1,43 @@
 # BridgeControl
 
-**Your API keys never leave your machine.**
+**Keys never leave. Spend never surprises.**
 
-Zero-trust local-first API gateway for developers.  
-File System Access + WebCrypto + IndexedDB + Service Worker + Web Locks.
+Zero-trust local-first API key gateway + CostRadar kill-switch.
 
-## What it does
+Fusion of: SvetsSecret / CostGate / CostRadar / BridgeControl.
 
-1. **Import .env** — reads from disk (or paste). Encrypts with AES-GCM. Stores only on this device.
-2. **Locked proxy** — Service Worker + Web Locks. One process per key. Plaintext lives ~50ms in memory.
-3. **Usage meter** — client bumps local counters; optional metadata sync to Supabase (never the secret).
+## What shipped (overnight MVP)
+
+| Layer | What |
+|-------|------|
+| **Weld** | Import `.env` via File System Access or paste → AES-GCM in IndexedDB |
+| **Lock** | Web Locks exclusive use · prove-lock decrypts ~50ms then discards |
+| **Kill** | CostRadar budget + manual/auto kill switch blocks all key use |
+| **Meter** | Local usage events + estimated spend (demo rates) |
+| **Proxy** | Service Worker `/api/proxy/:provider/:keyId/...` (CORS-limited upstream) |
+
+**Hard rule:** secret values never hit our server. Metadata only.
 
 ## Stack
 
-- Next.js (App Router) + TypeScript + Tailwind
-- Browser: File System Access, WebCrypto, IndexedDB, Service Worker, Web Locks
-- Supabase: auth + `keys_meta` / `usage_events` metadata only
-- Stripe: metered billing (later)
+Next.js · TypeScript · Tailwind · IndexedDB · WebCrypto · Web Locks · Service Worker · Vercel
 
-## Hard rules
+## Try
 
-- **Never** send key values to the server.
-- UI language: Secure / Locked / Zero-trust — not "vault/ghost/hide".
-- Secrets only in device memory under exclusive Web Lock.
+1. Open https://promptslaktaren.vercel.app in Chrome/Edge  
+2. Paste `OPENAI_API_KEY=sk-test-demo123456` → Weld  
+3. **Prove lock** → usage + meter  
+4. Set budget to `$0.01` → prove again → **AUTO-KILL**  
+5. Arm/disarm kill switch manually  
 
-## Local
+## Pricing (UI live, Stripe later)
 
-```bash
-npm install
-npm run dev
-```
+- Indie 99 kr · Startup 999 kr · Enterprise 9999 kr + 2% take on proxied traffic
 
-Open Chrome/Edge → Import .env.
+## Show HN
 
-## Security notes
+> We stopped API key leaks by never letting the key leave the machine (Web Locks + File System Access + kill switch)
 
-| Claim | Reality |
-|-------|---------|
-| OS keychain | WebCrypto non-extractable keys + IndexedDB. Full OS keychain needs native helper (phase 2). |
-| Proxy any API | SW same-origin intercept + client unlock. CORS to upstream still applies from browser context. |
-| YubiKey / WebUSB | Enterprise tier — not in Day 1 MVP. |
+## Not in v1
 
-## Show HN angle
-
-> We stopped API key leaks by never letting the key leave the machine (Web Locks + File System Access)
-
----
-
-Formerly PromptSlaktaren. That product is dead. This is BridgeControl.
+YubiKey/WebUSB · real Stripe metered · multi-device sync · full upstream CORS bypass (needs extension)
