@@ -13,14 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PromptSlaktaren – Skriv ett ord. Få en app.",
+  title: "PromptSlaktaren \u2013 Write one word. Get an app.",
   description:
-    "Ett ord → 15-punkts prompt som funkar i Claude, Grok, Meta AI, Venice AI. Bygg Next.js + Supabase + Stripe-appar på sekunder.",
-  metadataBase: new URL("https://promptslaktaren.se"),
+    "One word \u2192 15-point prompt for Claude, Grok, Meta AI, Venice AI. Next.js + Supabase + Stripe. EN & SV. Top of funnel for Fred-platform.",
+  metadataBase: new URL("https://promptslaktaren.vercel.app"),
   openGraph: {
-    title: "PromptSlaktaren – Skriv ett ord. Få en app.",
+    title: "PromptSlaktaren \u2013 Write one word. Get an app.",
     description:
-      "Ett ord → 15-punkts prompt. Copy-paste in i valfri AI och shippa.",
+      "One word \u2192 15-point prompt. Copy-paste into any AI and ship. Part of the Fred ecosystem.",
     type: "website",
   },
 };
@@ -32,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="sv"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
