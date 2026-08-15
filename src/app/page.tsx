@@ -8,7 +8,7 @@ import {
   deleteKey,
   type KeyMeta,
 } from "@/lib/secure-store";
-import { registerBridgeSW, proxyUrl } from "@/lib/bridge-client";
+import { registerBridgeSW, proveLock } from "@/lib/bridge-client";
 
 export default function Home() {
   const [keys, setKeys] = useState<KeyMeta[]>([]);
@@ -70,30 +70,17 @@ export default function Home() {
     await refresh();
   }
 
-  async function onTestProxy(k: KeyMeta) {
+  async function onProveLock(k: KeyMeta) {
     setProxyLog(null);
     setBusy(true);
     try {
-      // Stripe balance is a cheap authenticated read when key is valid
-      const path =
-        k.provider === "stripe"
-          ? "v1/balance"
-          : k.provider === "openai"
-            ? "v1/models"
-            : "";
-      if (!path) {
-        setProxyLog("No demo path for this provider yet.");
-        return;
-      }
-      const url = proxyUrl(k.provider, k.id, path);
-      const res = await fetch(url, { method: "GET" });
-      const text = await res.text();
+      const r = await proveLock(k.id);
       setProxyLog(
-        `${k.provider} → ${res.status} · ${text.slice(0, 180)}${text.length > 180 ? "…" : ""}`
+        `LOCKED OK · ${k.name} · decrypt ${r.ms}ms · secret length ${r.len} (not shown) · usage +1`
       );
       await refresh();
     } catch (e) {
-      setProxyLog(e instanceof Error ? e.message : "Proxy failed");
+      setProxyLog(e instanceof Error ? e.message : "Lock test failed");
     } finally {
       setBusy(false);
     }
@@ -107,7 +94,7 @@ export default function Home() {
             Bridge<span className="text-emerald-400">Control</span>
           </div>
           <span className="text-xs text-zinc-500 font-mono">
-            {totalCalls} proxied calls · local only
+            {totalCalls} locked uses · local only
           </span>
         </div>
       </header>
@@ -136,7 +123,7 @@ export default function Home() {
               t: "Usage meter",
               d:
                 totalCalls > 0
-                  ? `${totalCalls} calls on this device`
+                  ? `${totalCalls} locked uses on this device`
                   : "See cost before the bill hits.",
             },
           ].map((f) => (
@@ -209,15 +196,13 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    {(k.provider === "stripe" || k.provider === "openai") && (
-                      <button
-                        onClick={() => onTestProxy(k)}
-                        disabled={busy}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-400 hover:bg-zinc-700 disabled:opacity-40"
-                      >
-                        Test proxy
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onProveLock(k)}
+                      disabled={busy}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-400 hover:bg-zinc-700 disabled:opacity-40"
+                    >
+                      Prove lock
+                    </button>
                     <button
                       onClick={() => onDelete(k.id)}
                       className="text-xs text-zinc-500 hover:text-red-400"
@@ -230,14 +215,14 @@ export default function Home() {
             </ul>
           )}
           {proxyLog && (
-            <pre className="mt-4 text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">
+            <pre className="mt-4 text-xs text-emerald-400/90 bg-zinc-900 border border-zinc-800 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap">
               {proxyLog}
             </pre>
           )}
           <p className="mt-4 text-xs text-zinc-600">
-            Plaintext values are never shown. Decrypt happens only under Web Lock
-            for a single proxied request. Network tab should show no secret on our
-            origin — only Authorization to the upstream host via SW.
+            Prove lock = exclusive Web Lock + decrypt + discard. Secret never
+            rendered, never POSTed to our origin. Upstream SW proxy is ready for
+            providers that allow browser CORS or extension mode.
           </p>
         </section>
       </main>
