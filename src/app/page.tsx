@@ -1,5 +1,6 @@
 "use client";
-
+import PayGateCard from "@/components/PayGateCard"
+import LogRiverCard from "@/components/LogRiverCard"
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   pickAndImportEnv,
@@ -382,6 +383,15 @@ export default function Home() {
             machine (Web Locks + File System Access + kill switch)
           </p>
         </section>
+{/* BLACK EDITION */}
+<div className="mt-8 border-t border-[#00FF88]/30 pt-6">
+  <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 mb-4 flex justify-between items-center">
+    <span className="text-[#00FF88] font-bold text-xs tracking-widest">BRIDGECONTROL BLACK - $299/MO</span>
+    <span className="text- text-[#00FF88]/70">Includes Weld, Lock, Kill, Burn, Ghost, PayGate, River - 2% take</span>
+  </div>
+  <PayGateCard />
+  <LogRiverCard />
+</div>
       </main>
 
       <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-600">
