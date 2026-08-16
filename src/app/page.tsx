@@ -5,6 +5,7 @@ import { BurnCard } from "@/components/BurnCard";
 import { GhostCard } from "@/components/GhostCard";
 import PayGateCard from "@/components/PayGateCard";
 import LogRiverCard from "@/components/LogRiverCard";
+import KillSwitchPro from "@/components/KillSwitchPro";
 import {
   pickAndImportEnv,
   importEnvText,
@@ -15,9 +16,6 @@ import {
 import { registerBridgeSW, proveLock } from "@/lib/bridge-client";
 import {
   getRadarConfig,
-  setMonthlyBudget,
-  armKillSwitch,
-  disarmKillSwitch,
   listUsage,
   monthSpendCents,
   type RadarConfig,
@@ -33,14 +31,12 @@ export default function Home() {
   const [cfg, setCfg] = useState<RadarConfig | null>(null);
   const [spend, setSpend] = useState(0);
   const [events, setEvents] = useState<UsageEvent[]>([]);
-  const [budgetInput, setBudgetInput] = useState("50");
 
   const refresh = useCallback(async () => {
     try {
       setKeys(await listKeys());
       const c = await getRadarConfig();
       setCfg(c);
-      setBudgetInput(String(c.monthlyBudgetCents / 100));
       setSpend(await monthSpendCents());
       setEvents(await listUsage(20));
     } catch {
@@ -57,10 +53,6 @@ export default function Home() {
     () => keys.reduce((n, k) => n + (k.usageCount || 0), 0),
     [keys]
   );
-
-  const budgetPct = cfg
-    ? Math.min(100, (spend / Math.max(1, cfg.monthlyBudgetCents)) * 100)
-    : 0;
 
   async function onImportFile() {
     setBusy(true);
@@ -124,23 +116,16 @@ export default function Home() {
     }
   }
 
-  async function onSaveBudget() {
-    const dollars = Number(budgetInput);
-    if (Number.isNaN(dollars) || dollars < 0) return;
-    await setMonthlyBudget(Math.round(dollars * 100));
-    await refresh();
-  }
-
   return (
-    <div className="flex flex-col flex-1">
-      <header className="border-b border-zinc-800 bg-zinc-950/90 backdrop-blur sticky top-0 z-10">
+    <div className="flex flex-col flex-1 bg-black">
+      <header className="border-b border-zinc-900 bg-black/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="font-bold text-xl tracking-tight text-white">
-            Bridge<span className="text-emerald-400">Control</span>
+            Bridge<span className="text-[#00FF88]">Control</span>
           </div>
           <div className="flex items-center gap-3 text-xs font-mono">
             {cfg?.killed ? (
-              <span className="text-red-400 animate-pulse">KILL SWITCH ON</span>
+              <span className="text-[#ff0033] animate-pulse">KILL SWITCH ON</span>
             ) : (
               <span className="text-zinc-500">
                 {totalCalls} uses · est ${(spend / 100).toFixed(2)}/mo
@@ -150,26 +135,26 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-12 max-w-3xl mx-auto w-full space-y-12">
+      <main className="flex-1 px-4 py-12 max-w-3xl mx-auto w-full space-y-10">
         <div className="border border-[#00FF88] bg-[#00FF88]/5 text-[#00FF88] text-center text-xs font-mono font-bold tracking-widest py-2 uppercase">
-          BLACK EDITION - 13:00 DROP
+          BLACK EDITION — KILL SWITCH 2.0
         </div>
 
         <GhostCard onGhostEnv={onGhostEnv} onLog={(m) => setLog(m)} busy={busy} />
 
         <section className="text-center">
-          <p className="text-emerald-400 text-sm font-semibold mb-3">
-            zero-trust · local-first · kill-switch
+          <p className="text-[#00FF88] text-sm font-semibold mb-3 font-mono">
+            zero-trust · local-first · kill-switch 2.0
           </p>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
             Keys never leave.
             <br />
-            <span className="text-emerald-400">Spend never surprises.</span>
+            <span className="text-[#00FF88]">Spend never surprises.</span>
           </h1>
           <p className="text-lg text-zinc-400 max-w-xl mx-auto">
             Weld every .env into an encrypted on-device store. Web Locks for
-            exclusive use. CostRadar kills traffic when budget is hit. No secret
-            on our servers.
+            exclusive use. Kill Switch 2.0 graphs cost and blocks at budget —
+            including a $10k spike simulator.
           </p>
         </section>
 
@@ -177,11 +162,11 @@ export default function Home() {
           {[
             { t: "Weld", d: "Import .env to AES-GCM. Masked only." },
             { t: "Lock", d: "Web Locks. One process. ~50ms plaintext." },
-            { t: "Kill", d: "Budget hit then all keys blocked locally." },
+            { t: "Kill 2.0", d: "Chart · $10k spike · Slack alert." },
           ].map((f) => (
             <div
               key={f.t}
-              className="border border-zinc-800 bg-zinc-900/50 p-5"
+              className="border border-zinc-800 bg-zinc-950 p-5"
             >
               <h3 className="font-semibold text-white mb-1">{f.t}</h3>
               <p className="text-sm text-zinc-500">{f.d}</p>
@@ -189,102 +174,30 @@ export default function Home() {
           ))}
         </section>
 
-        <section className="border border-zinc-800 bg-zinc-900/40 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">CostRadar</h2>
-            {cfg?.killed ? (
-              <button
-                type="button"
-                onClick={async () => {
-                  await disarmKillSwitch();
-                  await refresh();
-                  setLog("Kill switch disarmed");
-                }}
-                className="text-xs px-3 py-1.5 bg-red-500/20 text-red-300 border border-red-500/40"
-              >
-                Disarm kill switch
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={async () => {
-                  await armKillSwitch("Manual arm");
-                  await refresh();
-                  setLog("Kill switch ARMED");
-                }}
-                className="text-xs px-3 py-1.5 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400"
-              >
-                Arm kill switch
-              </button>
-            )}
-          </div>
+        <KillSwitchPro onLog={(m) => setLog(m)} onRefresh={refresh} />
 
-          <div className="mb-3 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-2xl font-bold text-white">
-                ${(spend / 100).toFixed(2)}
-                <span className="text-sm font-normal text-zinc-500">
-                  {" "}/ ${(cfg?.monthlyBudgetCents || 0) / 100} budget
-                </span>
-              </p>
-              <p className="text-xs text-zinc-500 mt-1">
-                Local estimate meter. Card billing later.
-              </p>
-            </div>
-            <div className="flex gap-2 items-center">
-              <span className="text-xs text-zinc-500">$</span>
-              <input
-                value={budgetInput}
-                onChange={(e) => setBudgetInput(e.target.value)}
-                className="w-20 bg-zinc-950 border border-zinc-700 px-2 py-1 text-sm text-white"
-              />
-              <button
-                type="button"
-                onClick={onSaveBudget}
-                className="text-xs px-2 py-1 bg-zinc-800 text-emerald-400"
-              >
-                Set
-              </button>
-            </div>
-          </div>
-
-          <div className="h-2 bg-zinc-800 overflow-hidden">
-            <div
-              className={`h-full transition-all ${
-                budgetPct >= 100
-                  ? "bg-red-500"
-                  : budgetPct >= 80
-                    ? "bg-amber-500"
-                    : "bg-emerald-500"
-              }`}
-              style={{ width: `${budgetPct}%` }}
-            />
-          </div>
-
-          {cfg?.killed && (
-            <p className="mt-3 text-sm text-red-400">
-              {cfg.killReason || "Kill switch active"}
-            </p>
-          )}
-
-          {events.length > 0 && (
-            <ul className="mt-4 space-y-1 max-h-32 overflow-y-auto">
+        {events.length > 0 && (
+          <section className="border border-zinc-900 bg-zinc-950/80 p-4">
+            <h3 className="text-xs font-mono text-zinc-500 mb-2">Recent usage</h3>
+            <ul className="space-y-1 max-h-28 overflow-y-auto">
               {events.map((e) => (
                 <li
                   key={e.id}
                   className="text-xs font-mono text-zinc-500 flex justify-between gap-2"
                 >
                   <span>
-                    {e.provider} · {new Date(e.at).toLocaleTimeString()}
+                    {e.provider}
+                    {e.note ? ` · ${e.note}` : ""} ·{" "}
+                    {new Date(e.at).toLocaleTimeString()}
                   </span>
-                  <span>~${(e.estimatedCents / 100).toFixed(3)}</span>
+                  <span>~${(e.estimatedCents / 100).toFixed(2)}</span>
                 </li>
               ))}
             </ul>
-          )}
-        </section>
+          </section>
+        )}
 
-        <section className="border border-zinc-800 bg-zinc-900/40 p-6">
+        <section className="border border-zinc-800 bg-zinc-950 p-6">
           <h2 className="text-lg font-semibold text-white mb-4">
             Weld .env in 10 seconds
           </h2>
@@ -293,7 +206,7 @@ export default function Home() {
               type="button"
               onClick={onImportFile}
               disabled={busy}
-              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold disabled:opacity-50"
+              className="px-6 py-3 bg-[#00FF88] hover:bg-[#00FF88]/90 text-black font-bold disabled:opacity-50"
             >
               {busy ? "Working…" : "Import .env"}
             </button>
@@ -305,17 +218,17 @@ export default function Home() {
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
             placeholder={"STRIPE_SECRET_KEY=sk_test_...\nOPENAI_API_KEY=sk-..."}
-            className="w-full h-24 bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-emerald-500"
+            className="w-full h-24 bg-black border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-[#00FF88]"
           />
           <button
             type="button"
             onClick={onImportPaste}
             disabled={busy || !paste.trim()}
-            className="mt-3 px-4 py-2 border border-zinc-700 text-zinc-300 text-sm hover:border-emerald-500 disabled:opacity-40"
+            className="mt-3 px-4 py-2 border border-zinc-700 text-zinc-300 text-sm hover:border-[#00FF88] disabled:opacity-40"
           >
             Weld pasted keys
           </button>
-          {status && <p className="mt-3 text-sm text-emerald-400">{status}</p>}
+          {status && <p className="mt-3 text-sm text-[#00FF88]">{status}</p>}
         </section>
 
         <section>
@@ -329,7 +242,7 @@ export default function Home() {
               {keys.map((k) => (
                 <li
                   key={k.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-zinc-800 bg-zinc-950/80 px-4 py-3"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-zinc-800 bg-black px-4 py-3"
                 >
                   <div className="min-w-0">
                     <div className="font-medium text-zinc-200 truncate">
@@ -344,7 +257,7 @@ export default function Home() {
                       type="button"
                       onClick={() => onProve(k)}
                       disabled={busy || !!cfg?.killed}
-                      className="text-xs px-3 py-1.5 bg-zinc-800 text-emerald-400 disabled:opacity-30"
+                      className="text-xs px-3 py-1.5 bg-zinc-900 text-[#00FF88] border border-[#00FF88]/30 disabled:opacity-30"
                     >
                       Prove lock
                     </button>
@@ -374,7 +287,7 @@ export default function Home() {
             </ul>
           )}
           {log && (
-            <pre className="mt-4 text-xs text-emerald-400/90 bg-zinc-900 border border-zinc-800 p-3 whitespace-pre-wrap font-mono">
+            <pre className="mt-4 text-xs text-[#00FF88]/90 bg-zinc-950 border border-zinc-800 p-3 whitespace-pre-wrap font-mono">
               {log}
             </pre>
           )}
@@ -385,7 +298,7 @@ export default function Home() {
             BridgeControl Black — $299/mo
           </h2>
           <p className="text-center text-sm text-zinc-400 mb-4">
-            Includes Weld, Lock, Kill, Burn, Ghost, PayGate, River — 2% take
+            Includes Weld, Lock, Kill 2.0, Burn, Ghost, PayGate, River — 2% take
           </p>
           <div className="grid sm:grid-cols-3 gap-3">
             {[
@@ -393,7 +306,7 @@ export default function Home() {
               {
                 name: "Black",
                 price: "$299",
-                d: "Burn · Ghost · PayGate · River · 2%",
+                d: "Burn · Ghost · PayGate · River · Kill 2.0",
               },
               {
                 name: "Team",
@@ -403,7 +316,7 @@ export default function Home() {
             ].map((p) => (
               <div
                 key={p.name}
-                className="border border-zinc-800 bg-zinc-900/30 p-4 text-center"
+                className="border border-zinc-800 bg-black p-4 text-center"
               >
                 <p className="text-zinc-400 text-sm">{p.name}</p>
                 <p className="text-xl font-bold text-[#00FF88] my-1">{p.price}</p>
@@ -426,7 +339,7 @@ export default function Home() {
               BRIDGECONTROL BLACK - $299/MO
             </span>
             <span className="text-[#00FF88]/70 text-xs">
-              Weld, Lock, Kill, Burn, Ghost, PayGate, River — 2% take
+              Weld, Lock, Kill 2.0, Burn, Ghost, PayGate, River — 2% take
             </span>
           </div>
           <PayGateCard />
@@ -434,8 +347,8 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-600">
-        BridgeControl Black · Keys never leave · Spend never surprises
+      <footer className="border-t border-zinc-900 py-8 text-center text-sm text-zinc-600">
+        BridgeControl Black · Kill Switch 2.0 · Keys never leave
       </footer>
     </div>
   );
