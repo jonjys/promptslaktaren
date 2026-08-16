@@ -1,9 +1,10 @@
 "use client";
-import BurnCard from "@/components/BurnCard"
-import GhostCard from "@/components/GhostCard"
-import PayGateCard from "@/components/PayGateCard"
-import LogRiverCard from "@/components/LogRiverCard"
+
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BurnCard } from "@/components/BurnCard";
+import { GhostCard } from "@/components/GhostCard";
+import PayGateCard from "@/components/PayGateCard";
+import LogRiverCard from "@/components/LogRiverCard";
 import {
   pickAndImportEnv,
   importEnvText,
@@ -91,6 +92,20 @@ export default function Home() {
     }
   }
 
+  async function onGhostEnv(text: string) {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const imported = await importEnvText(text);
+      setStatus(`GHOST welded ${imported.length} key(s). Value never shown.`);
+      await refresh();
+    } catch (e) {
+      setStatus(e instanceof Error ? e.message : "Ghost weld failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onProve(k: KeyMeta) {
     setLog(null);
     setBusy(true);
@@ -136,6 +151,12 @@ export default function Home() {
       </header>
 
       <main className="flex-1 px-4 py-12 max-w-3xl mx-auto w-full space-y-12">
+        <div className="border border-[#00FF88] bg-[#00FF88]/5 text-[#00FF88] text-center text-xs font-mono font-bold tracking-widest py-2 uppercase">
+          BLACK EDITION - 13:00 DROP
+        </div>
+
+        <GhostCard onGhostEnv={onGhostEnv} onLog={(m) => setLog(m)} busy={busy} />
+
         <section className="text-center">
           <p className="text-emerald-400 text-sm font-semibold mb-3">
             zero-trust · local-first · kill-switch
@@ -160,7 +181,7 @@ export default function Home() {
           ].map((f) => (
             <div
               key={f.t}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5"
+              className="border border-zinc-800 bg-zinc-900/50 p-5"
             >
               <h3 className="font-semibold text-white mb-1">{f.t}</h3>
               <p className="text-sm text-zinc-500">{f.d}</p>
@@ -168,7 +189,7 @@ export default function Home() {
           ))}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <section className="border border-zinc-800 bg-zinc-900/40 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-white">CostRadar</h2>
             {cfg?.killed ? (
@@ -179,7 +200,7 @@ export default function Home() {
                   await refresh();
                   setLog("Kill switch disarmed");
                 }}
-                className="text-xs px-3 py-1.5 rounded-lg bg-red-500/20 text-red-300 border border-red-500/40"
+                className="text-xs px-3 py-1.5 bg-red-500/20 text-red-300 border border-red-500/40"
               >
                 Disarm kill switch
               </button>
@@ -191,7 +212,7 @@ export default function Home() {
                   await refresh();
                   setLog("Kill switch ARMED");
                 }}
-                className="text-xs px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400"
+                className="text-xs px-3 py-1.5 border border-zinc-700 text-zinc-400 hover:border-red-500 hover:text-red-400"
               >
                 Arm kill switch
               </button>
@@ -215,19 +236,19 @@ export default function Home() {
               <input
                 value={budgetInput}
                 onChange={(e) => setBudgetInput(e.target.value)}
-                className="w-20 bg-zinc-950 border border-zinc-700 rounded-lg px-2 py-1 text-sm text-white"
+                className="w-20 bg-zinc-950 border border-zinc-700 px-2 py-1 text-sm text-white"
               />
               <button
                 type="button"
                 onClick={onSaveBudget}
-                className="text-xs px-2 py-1 rounded-lg bg-zinc-800 text-emerald-400"
+                className="text-xs px-2 py-1 bg-zinc-800 text-emerald-400"
               >
                 Set
               </button>
             </div>
           </div>
 
-          <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
+          <div className="h-2 bg-zinc-800 overflow-hidden">
             <div
               className={`h-full transition-all ${
                 budgetPct >= 100
@@ -263,7 +284,7 @@ export default function Home() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-6">
+        <section className="border border-zinc-800 bg-zinc-900/40 p-6">
           <h2 className="text-lg font-semibold text-white mb-4">
             Weld .env in 10 seconds
           </h2>
@@ -272,7 +293,7 @@ export default function Home() {
               type="button"
               onClick={onImportFile}
               disabled={busy}
-              className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold disabled:opacity-50"
+              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold disabled:opacity-50"
             >
               {busy ? "Working…" : "Import .env"}
             </button>
@@ -284,13 +305,13 @@ export default function Home() {
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
             placeholder={"STRIPE_SECRET_KEY=sk_test_...\nOPENAI_API_KEY=sk-..."}
-            className="w-full h-24 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-emerald-500"
+            className="w-full h-24 bg-zinc-950 border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-emerald-500"
           />
           <button
             type="button"
             onClick={onImportPaste}
             disabled={busy || !paste.trim()}
-            className="mt-3 px-4 py-2 rounded-lg border border-zinc-700 text-zinc-300 text-sm hover:border-emerald-500 disabled:opacity-40"
+            className="mt-3 px-4 py-2 border border-zinc-700 text-zinc-300 text-sm hover:border-emerald-500 disabled:opacity-40"
           >
             Weld pasted keys
           </button>
@@ -308,7 +329,7 @@ export default function Home() {
               {keys.map((k) => (
                 <li
                   key={k.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-950/80 px-4 py-3"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-zinc-800 bg-zinc-950/80 px-4 py-3"
                 >
                   <div className="min-w-0">
                     <div className="font-medium text-zinc-200 truncate">
@@ -318,15 +339,25 @@ export default function Home() {
                       {k.provider} · {k.masked} · {k.usageCount}x
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => onProve(k)}
                       disabled={busy || !!cfg?.killed}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-400 disabled:opacity-30"
+                      className="text-xs px-3 py-1.5 bg-zinc-800 text-emerald-400 disabled:opacity-30"
                     >
                       Prove lock
                     </button>
+                    <BurnCard
+                      keyId={k.id}
+                      keyName={k.name}
+                      disabled={busy}
+                      onLog={(m) => setLog(m)}
+                      onBurned={(msg) => {
+                        setLog(msg);
+                        void refresh();
+                      }}
+                    />
                     <button
                       type="button"
                       onClick={async () => {
@@ -343,61 +374,68 @@ export default function Home() {
             </ul>
           )}
           {log && (
-            <pre className="mt-4 text-xs text-emerald-400/90 bg-zinc-900 border border-zinc-800 rounded-xl p-3 whitespace-pre-wrap">
+            <pre className="mt-4 text-xs text-emerald-400/90 bg-zinc-900 border border-zinc-800 p-3 whitespace-pre-wrap font-mono">
               {log}
             </pre>
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 p-6">
+        <section className="border border-zinc-800 p-6">
           <h2 className="text-lg font-semibold text-white mb-4 text-center">
-            Pricing (coming online)
+            BridgeControl Black — $299/mo
           </h2>
+          <p className="text-center text-sm text-zinc-400 mb-4">
+            Includes Weld, Lock, Kill, Burn, Ghost, PayGate, River — 2% take
+          </p>
           <div className="grid sm:grid-cols-3 gap-3">
             {[
-              { name: "Indie", price: "99 kr", d: "5 keys · local radar" },
+              { name: "Core", price: "Free", d: "Weld · Lock · Kill · local only" },
               {
-                name: "Startup",
-                price: "999 kr",
-                d: "50 keys · audit · kill policies",
+                name: "Black",
+                price: "$299",
+                d: "Burn · Ghost · PayGate · River · 2%",
               },
               {
-                name: "Enterprise",
-                price: "9999 kr",
-                d: "Unlimited · 2% take on proxied traffic",
+                name: "Team",
+                price: "$999 + 2%",
+                d: "metadata share · audit · YubiKey later",
               },
             ].map((p) => (
               <div
                 key={p.name}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4 text-center"
+                className="border border-zinc-800 bg-zinc-900/30 p-4 text-center"
               >
                 <p className="text-zinc-400 text-sm">{p.name}</p>
-                <p className="text-xl font-bold text-white my-1">{p.price}</p>
+                <p className="text-xl font-bold text-[#00FF88] my-1">{p.price}</p>
                 <p className="text-xs text-zinc-500">{p.d}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="text-center text-xs text-zinc-600 pb-8">
+        <section className="text-center text-xs text-zinc-600 pb-4">
           <p>
-            Show HN: We stopped API key leaks by never letting the key leave the
-            machine (Web Locks + File System Access + kill switch)
+            Show HN: We built Datadog + 1Password + ngrok + Stripe for localhost
+            — keys never leave
           </p>
         </section>
-{/* BLACK EDITION */}
-<div className="mt-8 border-t border-[#00FF88]/30 pt-6">
-  <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 mb-4 flex justify-between items-center">
-    <span className="text-[#00FF88] font-bold text-xs tracking-widest">BRIDGECONTROL BLACK - $299/MO</span>
-    <span className="text- text-[#00FF88]/70">Includes Weld, Lock, Kill, Burn, Ghost, PayGate, River - 2% take</span>
-  </div>
-  <PayGateCard />
-  <LogRiverCard />
-</div>
+
+        <div className="mt-4 border-t border-[#00FF88]/30 pt-6">
+          <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 mb-4 flex flex-wrap justify-between items-center gap-2">
+            <span className="text-[#00FF88] font-bold text-xs tracking-widest">
+              BRIDGECONTROL BLACK - $299/MO
+            </span>
+            <span className="text-[#00FF88]/70 text-xs">
+              Weld, Lock, Kill, Burn, Ghost, PayGate, River — 2% take
+            </span>
+          </div>
+          <PayGateCard />
+          <LogRiverCard />
+        </div>
       </main>
 
       <footer className="border-t border-zinc-800 py-8 text-center text-sm text-zinc-600">
-        BridgeControl · Keys never leave · Spend never surprises
+        BridgeControl Black · Keys never leave · Spend never surprises
       </footer>
     </div>
   );
