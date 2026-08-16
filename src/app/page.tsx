@@ -1,4 +1,6 @@
 "use client";
+import BurnCard from "@/components/BurnCard"
+import GhostCard from "@/components/GhostCard"
 import PayGateCard from "@/components/PayGateCard"
 import LogRiverCard from "@/components/LogRiverCard"
 import { useCallback, useEffect, useMemo, useState } from "react";

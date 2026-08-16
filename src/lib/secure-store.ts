@@ -248,3 +248,16 @@ export async function pickAndImportEnv(): Promise<KeyMeta[]> {
   const text = await file.text();
   return importEnvText(text);
 }
+
+// BLACK: BURN - delete key forever after use
+export async function withBurnedKey(keyId: string, cb: (v:string)=>any){
+  const db = await openDB(); const enc = await db.get("keys", keyId);
+  if(!enc) throw new Error("Key not found");
+  const plain = await decryptValue(enc);
+  const res = await cb(plain);
+  await db.delete("keys", keyId);
+  return res;
+}
+export async function burnKey(keyId: string){
+  const db = await openDB(); await db.delete("keys", keyId); return true;
+}
