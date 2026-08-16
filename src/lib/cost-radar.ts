@@ -1,6 +1,6 @@
 /**
- * CostRadar — local-first spend meter + kill switch.
- * No secrets here. Only counts, budgets, kill state.
+ * CostRadar — local-first spend meter + kill switch 2.0
+ * No secrets on server. Counts, budgets, kill state, optional Slack webhook URL in localStorage only.
  */
 
 const DB = "bridgecontrol";
@@ -13,6 +13,7 @@ export type UsageEvent = {
   provider: string;
   at: number;
   estimatedCents: number;
+  note?: string;
 };
 
 export type RadarConfig = {
@@ -23,22 +24,57 @@ export type RadarConfig = {
   killReason: string | null;
 };
 
+export type CostPoint = {
+  at: number;
+  cumulativeCents: number;
+  label: string;
+};
+
 const DEFAULT_CFG: RadarConfig = {
   id: "default",
-  monthlyBudgetCents: 5000, // $50 default demo budget
+  monthlyBudgetCents: 5000,
   killed: false,
   killedAt: null,
   killReason: null,
 };
 
-/** Rough cost estimates per call (demo metering) */
 export const COST_CENTS: Record<string, number> = {
   stripe: 0.1,
   openai: 2,
   anthropic: 3,
   supabase: 0.05,
   custom: 0.5,
+  spike: 10000, // $100 per synthetic spike unit — simulateSpike multiplies
 };
+
+const SLACK_KEY = "bc-slack-webhook";
+
+export function getSlackWebhook(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(SLACK_KEY) || "";
+}
+
+export function setSlackWebhook(url: string): void {
+  if (typeof window === "undefined") return;
+  if (!url) localStorage.removeItem(SLACK_KEY);
+  else localStorage.setItem(SLACK_KEY, url.trim());
+}
+
+async function fireSlackAlert(text: string): Promise<void> {
+  const url = getSlackWebhook();
+  if (!url || !url.startsWith("https://hooks.slack.com/")) return;
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: `🚨 BridgeControl Kill Switch\n${text}`,
+      }),
+    });
+  } catch {
+    // webhook optional — never block kill path
+  }
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -98,6 +134,7 @@ export async function armKillSwitch(reason: string): Promise<void> {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  void fireSlackAlert(reason);
 }
 
 export async function disarmKillSwitch(): Promise<void> {
@@ -121,15 +158,19 @@ export async function isKilled(): Promise<boolean> {
 
 export async function recordUsage(
   keyId: string,
-  provider: string
+  provider: string,
+  overrideCents?: number,
+  note?: string
 ): Promise<{ event: UsageEvent; autoKilled: boolean }> {
-  const cents = COST_CENTS[provider] ?? COST_CENTS.custom;
+  const cents =
+    overrideCents ?? COST_CENTS[provider] ?? COST_CENTS.custom;
   const event: UsageEvent = {
     id: crypto.randomUUID(),
     keyId,
     provider,
     at: Date.now(),
     estimatedCents: cents,
+    note,
   };
   const db = await openDB();
   await new Promise<void>((resolve, reject) => {
@@ -149,6 +190,21 @@ export async function recordUsage(
     autoKilled = true;
   }
   return { event, autoKilled };
+}
+
+/** Simulate a $10k API bill spike — forces kill if budget is lower */
+export async function simulateTenKSpike(): Promise<{
+  spendCents: number;
+  autoKilled: boolean;
+}> {
+  const { autoKilled } = await recordUsage(
+    "spike-sim",
+    "spike",
+    1_000_000, // $10,000.00
+    "$10k spike simulation"
+  );
+  const spendCents = await monthSpendCents();
+  return { spendCents, autoKilled };
 }
 
 export async function listUsage(limit = 50): Promise<UsageEvent[]> {
@@ -173,4 +229,19 @@ export async function monthSpendCents(): Promise<number> {
   return events
     .filter((e) => e.at >= t0)
     .reduce((s, e) => s + e.estimatedCents, 0);
+}
+
+/** Cumulative spend series for chart (oldest → newest) */
+export async function getCostSeries(limit = 40): Promise<CostPoint[]> {
+  const events = await listUsage(500);
+  const chrono = [...events].sort((a, b) => a.at - b.at).slice(-limit);
+  let cum = 0;
+  return chrono.map((e) => {
+    cum += e.estimatedCents;
+    return {
+      at: e.at,
+      cumulativeCents: cum,
+      label: new Date(e.at).toLocaleTimeString(),
+    };
+  });
 }
