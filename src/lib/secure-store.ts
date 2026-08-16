@@ -12,8 +12,8 @@ const META = "meta";
 export type KeyMeta = {
   id: string;
   name: string;
-  provider: string; // stripe | openai | anthropic | custom
-  masked: string; // sk_...abc
+  provider: string;
+  masked: string;
   createdAt: number;
   lastUsedAt: number | null;
   usageCount: number;
@@ -75,7 +75,6 @@ async function getOrCreateMasterKey(): Promise<CryptoKey> {
     tx.onerror = () => reject(tx.error);
   });
 
-  // re-import non-extractable for use
   return crypto.subtle.importKey(
     "jwk",
     jwk,
@@ -173,7 +172,6 @@ export async function listKeys(): Promise<KeyMeta[]> {
   });
 }
 
-/** Decrypt only under Web Lock — caller must hold lock. Key lives in memory briefly. */
 export async function unlockKeyValue(id: string): Promise<string> {
   const master = await getOrCreateMasterKey();
   const db = await openDB();
@@ -193,6 +191,34 @@ export async function unlockKeyValue(id: string): Promise<string> {
     stored.ciphertext
   );
   return new TextDecoder().decode(plain);
+}
+
+export async function withUnlockedKey<T>(
+  keyId: string,
+  fn: (plaintext: string) => Promise<T>
+): Promise<T> {
+  const lockName = `bridge-key-${keyId}`;
+  return navigator.locks.request(lockName, { mode: "exclusive" }, async () => {
+    const plain = await unlockKeyValue(keyId);
+    await bumpUsage(keyId);
+    return fn(plain);
+  });
+}
+
+export async function proveLock(
+  keyId: string
+): Promise<{ ok: true; tookMs: number; usageCount: number }> {
+  const t0 = performance.now();
+  await withUnlockedKey(keyId, async () => {
+    await new Promise((r) => setTimeout(r, 8));
+  });
+  const keys = await listKeys();
+  const k = keys.find((x) => x.id === keyId);
+  return {
+    ok: true,
+    tookMs: Math.round(performance.now() - t0),
+    usageCount: k?.usageCount ?? 0,
+  };
 }
 
 export async function bumpUsage(id: string): Promise<void> {
@@ -226,7 +252,6 @@ export async function deleteKey(id: string): Promise<void> {
   });
 }
 
-/** Parse .env via File System Access API */
 export async function pickAndImportEnv(): Promise<KeyMeta[]> {
   // @ts-expect-error File System Access API
   if (!window.showOpenFilePicker) {
@@ -249,15 +274,27 @@ export async function pickAndImportEnv(): Promise<KeyMeta[]> {
   return importEnvText(text);
 }
 
-// BLACK: BURN - delete key forever after use
-export async function withBurnedKey(keyId: string, cb: (v:string)=>any){
-  const db = await openDB(); const enc = await db.get("keys", keyId);
-  if(!enc) throw new Error("Key not found");
-  const plain = await decryptValue(enc);
-  const res = await cb(plain);
-  await db.delete("keys", keyId);
-  return res;
+/** BURN – one-time decrypt under exclusive lock, then permanent delete. */
+export async function withBurnedKey<T>(
+  keyId: string,
+  cb: (v: string) => Promise<T> | T
+): Promise<{ result: T; burnedAt: number }> {
+  const lockName = `bridge-key-${keyId}`;
+  return navigator.locks.request(lockName, { mode: "exclusive" }, async () => {
+    const plain = await unlockKeyValue(keyId);
+    await deleteKey(keyId);
+    const burnedAt = Date.now();
+    const result = await cb(plain);
+    return { result, burnedAt };
+  });
 }
-export async function burnKey(keyId: string){
-  const db = await openDB(); await db.delete("keys", keyId); return true;
+
+export async function burnKey(
+  keyId: string
+): Promise<{ burnedAt: number; tookMs: number }> {
+  const t0 = performance.now();
+  const { burnedAt } = await withBurnedKey(keyId, async () => {
+    await new Promise((r) => setTimeout(r, 6));
+  });
+  return { burnedAt, tookMs: Math.round(performance.now() - t0) };
 }
