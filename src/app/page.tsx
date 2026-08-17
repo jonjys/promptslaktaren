@@ -6,6 +6,7 @@ import { GhostCard } from "@/components/GhostCard";
 import PayGateCard from "@/components/PayGateCard";
 import LogRiverCard from "@/components/LogRiverCard";
 import KillSwitchPro from "@/components/KillSwitchPro";
+import VacuumTrapPanel from "@/components/VacuumTrapPanel";
 import {
   pickAndImportEnv,
   importEnvText,
@@ -21,6 +22,7 @@ import {
   type RadarConfig,
   type UsageEvent,
 } from "@/lib/cost-radar";
+import { setAppBadge } from "@/lib/locks";
 
 export default function Home() {
   const [keys, setKeys] = useState<KeyMeta[]>([]);
@@ -39,6 +41,7 @@ export default function Home() {
       setCfg(c);
       setSpend(await monthSpendCents());
       setEvents(await listUsage(20));
+      void setAppBadge(c.killed ? "KILLED" : null);
     } catch {
       setKeys([]);
     }
@@ -137,14 +140,14 @@ export default function Home() {
 
       <main className="flex-1 px-4 py-12 max-w-3xl mx-auto w-full space-y-10">
         <div className="border border-[#00FF88] bg-[#00FF88]/5 text-[#00FF88] text-center text-xs font-mono font-bold tracking-widest py-2 uppercase">
-          BLACK EDITION — KILL SWITCH 2.0
+          BLACK EDITION — INFRASTRUCTURE · 3% TAKE
         </div>
 
         <GhostCard onGhostEnv={onGhostEnv} onLog={(m) => setLog(m)} busy={busy} />
 
         <section className="text-center">
           <p className="text-[#00FF88] text-sm font-semibold mb-3 font-mono">
-            zero-trust · local-first · kill-switch 2.0
+            zero-trust · local-first · kill-switch 2.0 · proxy
           </p>
           <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
             Keys never leave.
@@ -152,29 +155,29 @@ export default function Home() {
             <span className="text-[#00FF88]">Spend never surprises.</span>
           </h1>
           <p className="text-lg text-zinc-400 max-w-xl mx-auto">
-            Weld every .env into an encrypted on-device store. Web Locks for
-            exclusive use. Kill Switch 2.0 graphs cost and blocks at budget —
-            including a $10k spike simulator.
+            Secret-slussen för API-trafik. Weld on-device. Lock exclusive.
+            Kill 2.0 graphs budget. Proxy meters 3%. Vacuum + Trap for
+            paranoia.
           </p>
         </section>
 
-        <section className="grid sm:grid-cols-3 gap-3 text-center">
+        <section className="grid sm:grid-cols-4 gap-3 text-center">
           {[
-            { t: "Weld", d: "Import .env to AES-GCM. Masked only." },
-            { t: "Lock", d: "Web Locks. One process. ~50ms plaintext." },
-            { t: "Kill 2.0", d: "Chart · $10k spike · Slack alert." },
+            { t: "Weld", d: "AES-GCM on-device" },
+            { t: "Lock", d: "Web Locks exclusive" },
+            { t: "Kill 2.0", d: "$10k spike · Slack" },
+            { t: "Proxy", d: "3% take gateway" },
           ].map((f) => (
-            <div
-              key={f.t}
-              className="border border-zinc-800 bg-zinc-950 p-5"
-            >
-              <h3 className="font-semibold text-white mb-1">{f.t}</h3>
-              <p className="text-sm text-zinc-500">{f.d}</p>
+            <div key={f.t} className="border border-zinc-800 bg-zinc-950 p-4">
+              <h3 className="font-semibold text-white mb-1 text-sm">{f.t}</h3>
+              <p className="text-xs text-zinc-500">{f.d}</p>
             </div>
           ))}
         </section>
 
         <KillSwitchPro onLog={(m) => setLog(m)} onRefresh={refresh} />
+
+        <VacuumTrapPanel onLog={(m) => setLog(m)} />
 
         {events.length > 0 && (
           <section className="border border-zinc-900 bg-zinc-950/80 p-4">
@@ -198,9 +201,7 @@ export default function Home() {
         )}
 
         <section className="border border-zinc-800 bg-zinc-950 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">
-            Weld .env in 10 seconds
-          </h2>
+          <h2 className="text-lg font-semibold text-white mb-4">Weld .env</h2>
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <button
               type="button"
@@ -245,9 +246,7 @@ export default function Home() {
                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-zinc-800 bg-black px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <div className="font-medium text-zinc-200 truncate">
-                      {k.name}
-                    </div>
+                    <div className="font-medium text-zinc-200 truncate">{k.name}</div>
                     <div className="text-xs text-zinc-500 font-mono">
                       {k.provider} · {k.masked} · {k.usageCount}x
                     </div>
@@ -298,20 +297,21 @@ export default function Home() {
             BridgeControl Black — $299/mo
           </h2>
           <p className="text-center text-sm text-zinc-400 mb-4">
-            Includes Weld, Lock, Kill 2.0, Burn, Ghost, PayGate, River — 2% take
+            Infrastructure pricing · <span className="text-[#00FF88]">3% take</span> on
+            proxied API spend
           </p>
           <div className="grid sm:grid-cols-3 gap-3">
             {[
-              { name: "Core", price: "Free", d: "Weld · Lock · Kill · local only" },
+              { name: "Core", price: "Free", d: "Weld · Lock · Kill local" },
               {
                 name: "Black",
                 price: "$299",
-                d: "Burn · Ghost · PayGate · River · Kill 2.0",
+                d: "Proxy · Vacuum · Trap · Kill 2.0 · 3%",
               },
               {
                 name: "Team",
-                price: "$999 + 2%",
-                d: "metadata share · audit · YubiKey later",
+                price: "$999 + 3%",
+                d: "org metadata · audit · YubiKey later",
               },
             ].map((p) => (
               <div
@@ -333,13 +333,13 @@ export default function Home() {
           </p>
         </section>
 
-        <div className="mt-4 border-t border-[#00FF88]/30 pt-6">
-          <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 mb-4 flex flex-wrap justify-between items-center gap-2">
+        <div className="mt-4 border-t border-[#00FF88]/30 pt-6 space-y-4">
+          <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 flex flex-wrap justify-between items-center gap-2">
             <span className="text-[#00FF88] font-bold text-xs tracking-widest">
-              BRIDGECONTROL BLACK - $299/MO
+              BRIDGECONTROL BLACK · 3% TAKE
             </span>
             <span className="text-[#00FF88]/70 text-xs">
-              Weld, Lock, Kill 2.0, Burn, Ghost, PayGate, River — 2% take
+              /api/proxy/[provider] · spend_ledger · kill gate
             </span>
           </div>
           <PayGateCard />
@@ -348,7 +348,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-zinc-900 py-8 text-center text-sm text-zinc-600">
-        BridgeControl Black · Kill Switch 2.0 · Keys never leave
+        BridgeControl · secret-slussen · keys never leave · 3% take
       </footer>
     </div>
   );
