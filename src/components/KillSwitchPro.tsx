@@ -74,9 +74,22 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
     setBusy(true);
     try {
       const r = await simulateTenKSpike();
+      try {
+        await fetch("/api/kill", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "spike",
+            budgetCents: budget,
+            reason: "$10k spike",
+          }),
+        });
+      } catch {
+        /* offline ok — local kill still applied */
+      }
       onLog?.(
         r.autoKilled
-          ? `SPIKE $10k → KILL SWITCH TRIPPED · spend $${(r.spendCents / 100).toFixed(2)}`
+          ? `SPIKE $10k → KILL SWITCH TRIPPED · spend $${(r.spendCents / 100).toFixed(2)} · proxy blocked`
           : `SPIKE $10k recorded · spend $${(r.spendCents / 100).toFixed(2)}`
       );
       await refresh();
@@ -108,7 +121,7 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
             KILL SWITCH 2.0
           </h2>
           <p className="text-[11px] text-zinc-500 mt-0.5">
-            Cost over time · red zone · $10k spike · Slack alert
+            Cost over time · red zone · $10k spike · Slack · /api/kill
           </p>
         </div>
         {killed ? (
@@ -116,6 +129,15 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
             type="button"
             onClick={async () => {
               await disarmKillSwitch();
+              try {
+                await fetch("/api/kill", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "disarm" }),
+                });
+              } catch {
+                /* */
+              }
               onLog?.("Kill switch DISARMED");
               await refresh();
               onRefresh?.();
@@ -129,6 +151,15 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
             type="button"
             onClick={async () => {
               await armKillSwitch("Manual arm from Kill Switch 2.0");
+              try {
+                await fetch("/api/kill", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "arm" }),
+                });
+              } catch {
+                /* */
+              }
               onLog?.("Kill switch ARMED");
               await refresh();
               onRefresh?.();
@@ -179,14 +210,12 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
         </div>
       </div>
 
-      {/* SVG cost chart */}
       <div className="relative border border-[#111] bg-[#050505] p-2">
         <svg
           viewBox={`0 0 ${chart.w} ${chart.h}`}
           className="w-full h-24"
           preserveAspectRatio="none"
         >
-          {/* red zone above budget */}
           <rect
             x={0}
             y={0}
@@ -239,7 +268,7 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
 
       {killed && (
         <p className="text-sm text-[#ff0033] font-mono">
-          {cfg?.killReason || "Kill switch active — all unlocks blocked"}
+          {cfg?.killReason || "Kill switch active — unlocks + proxy blocked"}
         </p>
       )}
 
