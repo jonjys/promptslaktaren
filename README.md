@@ -1,43 +1,43 @@
-# BridgeControl
+# BridgeControl — BLACK EDITION
 
 **Keys never leave. Spend never surprises.**
 
-Zero-trust local-first API key gateway + CostRadar kill-switch.
+Secret-slussen som tar **3% av all API-trafik**.
+Inte en app. Bara röret.
 
-Fusion of: SvetsSecret / CostGate / CostRadar / BridgeControl.
-
-## What shipped (overnight MVP)
+## Layers
 
 | Layer | What |
 |-------|------|
-| **Weld** | Import `.env` via File System Access or paste → AES-GCM in IndexedDB |
-| **Lock** | Web Locks exclusive use · prove-lock decrypts ~50ms then discards |
-| **Kill** | CostRadar budget + manual/auto kill switch blocks all key use |
-| **Meter** | Local usage events + estimated spend (demo rates) |
-| **Proxy** | Service Worker `/api/proxy/:provider/:keyId/...` (CORS-limited upstream) |
+| **Weld** | File System Access + AES-GCM on-device. Klartext aldrig i DOM. |
+| **Lock** | `navigator.locks` exclusive — en process åt gången. |
+| **Kill 2.0** | Budgetgraf · $10k spike · Slack alert · blockar proxy. |
+| **Proxy** | `/api/proxy/[provider]` — gateway, spend_ledger, 3% take. |
+| **Vacuum** | Sug upp .env / clipboard / mock surfaces på ~11s. |
+| **Trap** | Honeypot keys. Anrop → Trap Triggered + IP. |
 
-**Hard rule:** secret values never hit our server. Metadata only.
+## Hard rules
+
+1. Plaintext keys stannar i browser under exclusive lock (Weld/Lock path).
+2. Proxy path meterar trafik och kan blockas av Kill Switch.
+3. Metadata only till server (masked, spend, kill status).
 
 ## Stack
 
-Next.js · TypeScript · Tailwind · IndexedDB · WebCrypto · Web Locks · Service Worker · Vercel
+Next.js App Router · TypeScript · Tailwind · IndexedDB · WebCrypto · Web Locks · Service Worker · Vercel PWA
 
 ## Try
 
-1. Open https://promptslaktaren.vercel.app in Chrome/Edge  
-2. Paste `OPENAI_API_KEY=sk-test-demo123456` → Weld  
-3. **Prove lock** → usage + meter  
-4. Set budget to `$0.01` → prove again → **AUTO-KILL**  
-5. Arm/disarm kill switch manually  
+1. Open production URL in **Chrome/Edge**
+2. Weld a `.env` (paste or file)
+3. Prove lock
+4. Kill Switch 2.0 → **Simulate $10k spike** → KILLED
+5. Vacuum · Drop Trap
 
-## Pricing (UI live, Stripe later)
+## Pricing
 
-- Indie 99 kr · Startup 999 kr · Enterprise 9999 kr + 2% take on proxied traffic
+**BridgeControl Black — $299/mo** + **3%** of proxied API spend.
 
 ## Show HN
 
-> We stopped API key leaks by never letting the key leave the machine (Web Locks + File System Access + kill switch)
-
-## Not in v1
-
-YubiKey/WebUSB · real Stripe metered · multi-device sync · full upstream CORS bypass (needs extension)
+> We built Datadog + 1Password + ngrok + Stripe for localhost — keys never leave

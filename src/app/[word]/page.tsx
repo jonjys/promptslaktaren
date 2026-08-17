@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function LegacyWordPage() {
+/** Old PromptSlaktaren SEO pages → home */
+export default function WordPage() {
   redirect("/");
 }
