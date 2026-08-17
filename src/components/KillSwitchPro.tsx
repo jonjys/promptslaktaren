@@ -85,12 +85,12 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
           }),
         });
       } catch {
-        /* offline ok — local kill still applied */
+        /* offline ok */
       }
       onLog?.(
         r.autoKilled
-          ? `SPIKE $10k → KILL SWITCH TRIPPED · spend $${(r.spendCents / 100).toFixed(2)} · proxy blocked`
-          : `SPIKE $10k recorded · spend $${(r.spendCents / 100).toFixed(2)}`
+          ? `SPIKE $10k → KILLED · $${(r.spendCents / 100).toFixed(2)} · proxy blocked`
+          : `SPIKE $10k · $${(r.spendCents / 100).toFixed(2)}`
       );
       await refresh();
       onRefresh?.();
@@ -110,18 +110,18 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
 
   function onSaveSlack() {
     setSlackWebhook(slack);
-    onLog?.(slack ? "Slack webhook saved (local only)" : "Slack webhook cleared");
+    onLog?.(slack ? "Slack webhook saved (local)" : "Slack webhook cleared");
   }
 
   return (
-    <section className="border border-[#00FF88]/40 bg-black p-5 space-y-4">
+    <section className="border border-[#00FF88]/40 bg-black p-4 sm:p-5 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[#00FF88] font-bold text-sm tracking-wide font-mono">
             KILL SWITCH 2.0
           </h2>
           <p className="text-[11px] text-zinc-500 mt-0.5">
-            Cost over time · red zone · $10k spike · Slack · /api/kill
+            Graph · spike · Slack · /api/kill
           </p>
         </div>
         {killed ? (
@@ -138,11 +138,11 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
               } catch {
                 /* */
               }
-              onLog?.("Kill switch DISARMED");
+              onLog?.("DISARMED");
               await refresh();
               onRefresh?.();
             }}
-            className="text-xs px-3 py-1.5 border border-red-500/50 bg-red-500/20 text-red-300 font-mono animate-pulse"
+            className="min-h-10 text-xs px-4 py-2 border border-red-500/50 bg-red-500/20 text-red-300 font-mono animate-pulse"
           >
             DISARM
           </button>
@@ -150,7 +150,7 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
           <button
             type="button"
             onClick={async () => {
-              await armKillSwitch("Manual arm from Kill Switch 2.0");
+              await armKillSwitch("Manual arm");
               try {
                 await fetch("/api/kill", {
                   method: "POST",
@@ -160,60 +160,61 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
               } catch {
                 /* */
               }
-              onLog?.("Kill switch ARMED");
+              onLog?.("ARMED");
               await refresh();
               onRefresh?.();
             }}
-            className="text-xs px-3 py-1.5 border border-zinc-700 text-zinc-400 font-mono hover:border-red-500 hover:text-red-400"
+            className="min-h-10 text-xs px-4 py-2 border border-zinc-700 text-zinc-400 font-mono"
           >
             ARM
           </button>
         )}
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="text-3xl font-bold tabular-nums text-white font-mono">
-            ${(spend / 100).toFixed(2)}
-            <span className="text-sm font-normal text-zinc-500">
-              {" "}
-              / ${(budget / 100).toFixed(0)}
-            </span>
-          </div>
-          <div className="text-[11px] text-zinc-500 mt-1">
-            {pct.toFixed(0)}% of budget
-            {killed ? " · KILLED" : pct >= 80 ? " · RED ZONE" : ""}
-          </div>
+      <div className="space-y-3">
+        <div className="text-2xl sm:text-3xl font-bold tabular-nums text-white font-mono">
+          ${(spend / 100).toFixed(2)}
+          <span className="text-sm font-normal text-zinc-500">
+            {" "}
+            / ${(budget / 100).toFixed(0)}
+          </span>
         </div>
+        <div className="text-[11px] text-zinc-500">
+          {pct.toFixed(0)}% of budget
+          {killed ? " · KILLED" : pct >= 80 ? " · RED ZONE" : ""}
+        </div>
+
         <div className="flex flex-wrap gap-2 items-center">
           <span className="text-xs text-zinc-500">$</span>
           <input
             value={budgetInput}
             onChange={(e) => setBudgetInput(e.target.value)}
-            className="w-20 bg-[#111] border border-[#333] px-2 py-1 text-sm text-white font-mono"
+            inputMode="decimal"
+            className="min-h-10 w-24 bg-[#111] border border-[#333] px-2 py-2 text-sm text-white font-mono"
           />
           <button
             type="button"
             onClick={onSaveBudget}
-            className="text-xs px-2 py-1 border border-[#00FF88]/40 text-[#00FF88] font-mono"
+            className="min-h-10 text-xs px-3 py-2 border border-[#00FF88]/40 text-[#00FF88] font-mono"
           >
             Set
           </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onSpike}
-            className="text-xs px-3 py-1.5 border border-[#ff0033] bg-[#ff0033]/15 text-[#ff0033] font-mono font-bold hover:bg-[#ff0033]/30 disabled:opacity-40"
-          >
-            Simulate $10k spike
-          </button>
         </div>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onSpike}
+          className="w-full min-h-12 text-sm px-3 py-3 border border-[#ff0033] bg-[#ff0033]/15 text-[#ff0033] font-mono font-bold disabled:opacity-40"
+        >
+          Simulate $10k spike
+        </button>
       </div>
 
       <div className="relative border border-[#111] bg-[#050505] p-2">
         <svg
           viewBox={`0 0 ${chart.w} ${chart.h}`}
-          className="w-full h-24"
+          className="w-full h-20 sm:h-24"
           preserveAspectRatio="none"
         >
           <rect
@@ -243,12 +244,9 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
             />
           )}
         </svg>
-        <div className="absolute top-2 right-2 text-[10px] font-mono text-zinc-600">
-          budget line
-        </div>
         {series.length < 2 && (
-          <div className="absolute inset-0 flex items-center justify-center text-[11px] text-zinc-600 font-mono">
-            Prove lock or spike to seed the graph
+          <div className="absolute inset-0 flex items-center justify-center text-[10px] text-zinc-600 font-mono px-2 text-center">
+            Spike or prove lock to seed graph
           </div>
         )}
       </div>
@@ -268,26 +266,26 @@ export default function KillSwitchPro({ onLog, onRefresh }: Props) {
 
       {killed && (
         <p className="text-sm text-[#ff0033] font-mono">
-          {cfg?.killReason || "Kill switch active — unlocks + proxy blocked"}
+          {cfg?.killReason || "Kill active — unlocks + proxy blocked"}
         </p>
       )}
 
       <div className="border-t border-[#111] pt-3 space-y-2">
         <label className="text-[11px] text-zinc-500 font-mono block">
-          Slack webhook (optional · stored only in this browser)
+          Slack webhook (local only)
         </label>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="url"
             placeholder="https://hooks.slack.com/services/..."
             value={slack}
             onChange={(e) => setSlack(e.target.value)}
-            className="flex-1 bg-[#111] border border-[#333] px-2 py-1.5 text-xs text-white font-mono"
+            className="flex-1 min-h-10 bg-[#111] border border-[#333] px-2 py-2 text-xs text-white font-mono"
           />
           <button
             type="button"
             onClick={onSaveSlack}
-            className="text-xs px-3 py-1.5 border border-[#333] text-zinc-400 font-mono hover:border-[#00FF88] hover:text-[#00FF88]"
+            className="min-h-10 text-xs px-3 py-2 border border-[#333] text-zinc-400 font-mono"
           >
             Save
           </button>

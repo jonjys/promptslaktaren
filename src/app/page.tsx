@@ -7,6 +7,7 @@ import PayGateCard from "@/components/PayGateCard";
 import LogRiverCard from "@/components/LogRiverCard";
 import KillSwitchPro from "@/components/KillSwitchPro";
 import VacuumTrapPanel from "@/components/VacuumTrapPanel";
+import ProxyStatusCard from "@/components/ProxyStatusCard";
 import {
   pickAndImportEnv,
   importEnvText,
@@ -120,57 +121,56 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col flex-1 bg-black">
-      <header className="border-b border-zinc-900 bg-black/95 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="font-bold text-xl tracking-tight text-white">
+    <div className="flex flex-col flex-1 bg-black min-h-[100dvh]">
+      <header className="border-b border-zinc-900 bg-black/95 backdrop-blur sticky top-0 z-10 safe-top">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+          <div className="font-bold text-lg sm:text-xl tracking-tight text-white">
             Bridge<span className="text-[#00FF88]">Control</span>
           </div>
-          <div className="flex items-center gap-3 text-xs font-mono">
+          <div className="flex items-center gap-2 text-[11px] sm:text-xs font-mono">
             {cfg?.killed ? (
-              <span className="text-[#ff0033] animate-pulse">KILL SWITCH ON</span>
+              <span className="text-[#ff0033] animate-pulse font-bold">KILLED</span>
             ) : (
               <span className="text-zinc-500">
-                {totalCalls} uses · est ${(spend / 100).toFixed(2)}/mo
+                {totalCalls} · ${(spend / 100).toFixed(2)}
               </span>
             )}
           </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-12 max-w-3xl mx-auto w-full space-y-10">
-        <div className="border border-[#00FF88] bg-[#00FF88]/5 text-[#00FF88] text-center text-xs font-mono font-bold tracking-widest py-2 uppercase">
-          BLACK EDITION — INFRASTRUCTURE · 3% TAKE
+      <main className="flex-1 px-3 sm:px-4 py-8 sm:py-12 max-w-3xl mx-auto w-full space-y-6 sm:space-y-10">
+        <div className="border border-[#00FF88] bg-[#00FF88]/5 text-[#00FF88] text-center text-[10px] sm:text-xs font-mono font-bold tracking-widest py-2.5 uppercase">
+          BLACK EDITION · 3% TAKE
         </div>
 
         <GhostCard onGhostEnv={onGhostEnv} onLog={(m) => setLog(m)} busy={busy} />
 
-        <section className="text-center">
-          <p className="text-[#00FF88] text-sm font-semibold mb-3 font-mono">
-            zero-trust · local-first · kill-switch 2.0 · proxy
+        <section className="text-center space-y-3">
+          <p className="text-[#00FF88] text-xs sm:text-sm font-semibold font-mono">
+            zero-trust · local-first · kill 2.0 · proxy
           </p>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-4">
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
             Keys never leave.
             <br />
             <span className="text-[#00FF88]">Spend never surprises.</span>
           </h1>
-          <p className="text-lg text-zinc-400 max-w-xl mx-auto">
-            Secret-slussen för API-trafik. Weld on-device. Lock exclusive.
-            Kill 2.0 graphs budget. Proxy meters 3%. Vacuum + Trap for
-            paranoia.
+          <p className="text-sm sm:text-lg text-zinc-400 max-w-xl mx-auto">
+            Secret-slussen. Weld on-device. Lock exclusive. Kill graphs budget.
+            Proxy meters 3%.
           </p>
         </section>
 
-        <section className="grid sm:grid-cols-4 gap-3 text-center">
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-center">
           {[
-            { t: "Weld", d: "AES-GCM on-device" },
-            { t: "Lock", d: "Web Locks exclusive" },
-            { t: "Kill 2.0", d: "$10k spike · Slack" },
-            { t: "Proxy", d: "3% take gateway" },
+            { t: "Weld", d: "AES-GCM" },
+            { t: "Lock", d: "Web Locks" },
+            { t: "Kill 2.0", d: "$10k spike" },
+            { t: "Proxy", d: "3% take" },
           ].map((f) => (
-            <div key={f.t} className="border border-zinc-800 bg-zinc-950 p-4">
-              <h3 className="font-semibold text-white mb-1 text-sm">{f.t}</h3>
-              <p className="text-xs text-zinc-500">{f.d}</p>
+            <div key={f.t} className="border border-zinc-800 bg-zinc-950 p-3 sm:p-4">
+              <h3 className="font-semibold text-white text-xs sm:text-sm">{f.t}</h3>
+              <p className="text-[10px] sm:text-xs text-zinc-500 mt-0.5">{f.d}</p>
             </div>
           ))}
         </section>
@@ -179,53 +179,52 @@ export default function Home() {
 
         <VacuumTrapPanel onLog={(m) => setLog(m)} />
 
+        <ProxyStatusCard />
+
         {events.length > 0 && (
-          <section className="border border-zinc-900 bg-zinc-950/80 p-4">
+          <section className="border border-zinc-900 bg-zinc-950/80 p-3 sm:p-4">
             <h3 className="text-xs font-mono text-zinc-500 mb-2">Recent usage</h3>
             <ul className="space-y-1 max-h-28 overflow-y-auto">
               {events.map((e) => (
                 <li
                   key={e.id}
-                  className="text-xs font-mono text-zinc-500 flex justify-between gap-2"
+                  className="text-[11px] font-mono text-zinc-500 flex justify-between gap-2"
                 >
-                  <span>
+                  <span className="truncate">
                     {e.provider}
-                    {e.note ? ` · ${e.note}` : ""} ·{" "}
-                    {new Date(e.at).toLocaleTimeString()}
+                    {e.note ? ` · ${e.note}` : ""}
                   </span>
-                  <span>~${(e.estimatedCents / 100).toFixed(2)}</span>
+                  <span className="shrink-0">~${(e.estimatedCents / 100).toFixed(2)}</span>
                 </li>
               ))}
             </ul>
           </section>
         )}
 
-        <section className="border border-zinc-800 bg-zinc-950 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Weld .env</h2>
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <section className="border border-zinc-800 bg-zinc-950 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-white mb-3">Weld .env</h2>
+          <div className="flex flex-col gap-3 mb-3">
             <button
               type="button"
               onClick={onImportFile}
               disabled={busy}
-              className="px-6 py-3 bg-[#00FF88] hover:bg-[#00FF88]/90 text-black font-bold disabled:opacity-50"
+              className="min-h-12 w-full px-6 py-3 bg-[#00FF88] text-black font-bold text-sm disabled:opacity-50"
             >
               {busy ? "Working…" : "Import .env"}
             </button>
-            <span className="text-zinc-600 text-sm self-center">
-              Chrome / Edge · File System Access
-            </span>
+            <p className="text-zinc-600 text-xs">Chrome / Edge · File System Access · eller klistra nedan</p>
           </div>
           <textarea
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
             placeholder={"STRIPE_SECRET_KEY=sk_test_...\nOPENAI_API_KEY=sk-..."}
-            className="w-full h-24 bg-black border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-[#00FF88]"
+            className="w-full h-28 bg-black border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-[#00FF88]"
           />
           <button
             type="button"
             onClick={onImportPaste}
             disabled={busy || !paste.trim()}
-            className="mt-3 px-4 py-2 border border-zinc-700 text-zinc-300 text-sm hover:border-[#00FF88] disabled:opacity-40"
+            className="mt-3 min-h-11 w-full sm:w-auto px-4 py-2.5 border border-zinc-700 text-zinc-300 text-sm hover:border-[#00FF88] disabled:opacity-40"
           >
             Weld pasted keys
           </button>
@@ -233,8 +232,8 @@ export default function Home() {
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold text-white mb-3">
-            Secured keys (this device only)
+          <h2 className="text-base sm:text-lg font-semibold text-white mb-3">
+            Secured keys (this device)
           </h2>
           {keys.length === 0 ? (
             <p className="text-zinc-500 text-sm">No keys. Weld a .env.</p>
@@ -243,11 +242,11 @@ export default function Home() {
               {keys.map((k) => (
                 <li
                   key={k.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-zinc-800 bg-black px-4 py-3"
+                  className="border border-zinc-800 bg-black px-3 sm:px-4 py-3 space-y-2"
                 >
                   <div className="min-w-0">
-                    <div className="font-medium text-zinc-200 truncate">{k.name}</div>
-                    <div className="text-xs text-zinc-500 font-mono">
+                    <div className="font-medium text-zinc-200 truncate text-sm">{k.name}</div>
+                    <div className="text-[11px] text-zinc-500 font-mono">
                       {k.provider} · {k.masked} · {k.usageCount}x
                     </div>
                   </div>
@@ -256,7 +255,7 @@ export default function Home() {
                       type="button"
                       onClick={() => onProve(k)}
                       disabled={busy || !!cfg?.killed}
-                      className="text-xs px-3 py-1.5 bg-zinc-900 text-[#00FF88] border border-[#00FF88]/30 disabled:opacity-30"
+                      className="min-h-10 flex-1 sm:flex-none text-xs px-3 py-2 bg-zinc-900 text-[#00FF88] border border-[#00FF88]/30 disabled:opacity-30"
                     >
                       Prove lock
                     </button>
@@ -276,7 +275,7 @@ export default function Home() {
                         await deleteKey(k.id);
                         await refresh();
                       }}
-                      className="text-xs text-zinc-500 hover:text-red-400"
+                      className="min-h-10 text-xs px-3 text-zinc-500 hover:text-red-400"
                     >
                       Remove
                     </button>
@@ -286,60 +285,41 @@ export default function Home() {
             </ul>
           )}
           {log && (
-            <pre className="mt-4 text-xs text-[#00FF88]/90 bg-zinc-950 border border-zinc-800 p-3 whitespace-pre-wrap font-mono">
+            <pre className="mt-4 text-[11px] text-[#00FF88]/90 bg-zinc-950 border border-zinc-800 p-3 whitespace-pre-wrap font-mono break-words">
               {log}
             </pre>
           )}
         </section>
 
-        <section className="border border-zinc-800 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 text-center">
+        <section className="border border-zinc-800 p-4 sm:p-6">
+          <h2 className="text-base sm:text-lg font-semibold text-white mb-2 text-center">
             BridgeControl Black — $299/mo
           </h2>
-          <p className="text-center text-sm text-zinc-400 mb-4">
-            Infrastructure pricing · <span className="text-[#00FF88]">3% take</span> on
-            proxied API spend
+          <p className="text-center text-xs sm:text-sm text-zinc-400 mb-4">
+            Infrastructure · <span className="text-[#00FF88]">3% take</span> on proxied spend
           </p>
-          <div className="grid sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
             {[
               { name: "Core", price: "Free", d: "Weld · Lock · Kill local" },
-              {
-                name: "Black",
-                price: "$299",
-                d: "Proxy · Vacuum · Trap · Kill 2.0 · 3%",
-              },
-              {
-                name: "Team",
-                price: "$999 + 3%",
-                d: "org metadata · audit · YubiKey later",
-              },
+              { name: "Black", price: "$299", d: "Proxy · Vacuum · Trap · 3%" },
+              { name: "Team", price: "$999 + 3%", d: "org · audit · YubiKey later" },
             ].map((p) => (
-              <div
-                key={p.name}
-                className="border border-zinc-800 bg-black p-4 text-center"
-              >
-                <p className="text-zinc-400 text-sm">{p.name}</p>
-                <p className="text-xl font-bold text-[#00FF88] my-1">{p.price}</p>
-                <p className="text-xs text-zinc-500">{p.d}</p>
+              <div key={p.name} className="border border-zinc-800 bg-black p-4 text-center">
+                <p className="text-zinc-400 text-xs">{p.name}</p>
+                <p className="text-lg font-bold text-[#00FF88] my-1">{p.price}</p>
+                <p className="text-[11px] text-zinc-500">{p.d}</p>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="text-center text-xs text-zinc-600 pb-4">
-          <p>
-            Show HN: We built Datadog + 1Password + ngrok + Stripe for localhost
-            — keys never leave
-          </p>
-        </section>
-
-        <div className="mt-4 border-t border-[#00FF88]/30 pt-6 space-y-4">
-          <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 flex flex-wrap justify-between items-center gap-2">
-            <span className="text-[#00FF88] font-bold text-xs tracking-widest">
+        <div className="border-t border-[#00FF88]/30 pt-6 space-y-4">
+          <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 text-center sm:text-left sm:flex sm:justify-between sm:items-center gap-2">
+            <span className="text-[#00FF88] font-bold text-[10px] sm:text-xs tracking-widest block">
               BRIDGECONTROL BLACK · 3% TAKE
             </span>
-            <span className="text-[#00FF88]/70 text-xs">
-              /api/proxy/[provider] · spend_ledger · kill gate
+            <span className="text-[#00FF88]/70 text-[10px] sm:text-xs block mt-1 sm:mt-0">
+              /api/proxy · spend_ledger · kill gate
             </span>
           </div>
           <PayGateCard />
@@ -347,8 +327,8 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="border-t border-zinc-900 py-8 text-center text-sm text-zinc-600">
-        BridgeControl · secret-slussen · keys never leave · 3% take
+      <footer className="border-t border-zinc-900 py-6 text-center text-xs text-zinc-600 px-3">
+        BridgeControl · keys never leave · 3% take
       </footer>
     </div>
   );
