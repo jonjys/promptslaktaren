@@ -11,28 +11,29 @@ Inte en app. Bara röret.
 |-------|------|
 | **Weld** | File System Access + AES-GCM on-device. Klartext aldrig i DOM. |
 | **Lock** | `navigator.locks` exclusive — en process åt gången. |
-| **Kill 2.0** | Budgetgraf · $10k spike · Slack alert · blockar proxy. |
-| **Proxy** | `/api/proxy/[provider]` — gateway, spend_ledger, 3% take. |
-| **Vacuum** | Sug upp .env / clipboard / mock surfaces på ~11s. |
-| **Trap** | Honeypot keys. Anrop → Trap Triggered + IP. |
+| **Kill 2.0** | Budgetgraf · $10k spike · Slack · `/api/kill`. |
+| **Proxy** | `/api/proxy/[provider]` + middleware 402/451 · 3% take. |
+| **Vacuum** | Sug upp .env / clipboard / mock surfaces. |
+| **Trap** | Honeypot `sk_test_trap_*` → 451. |
 
 ## Hard rules
 
-1. Plaintext keys stannar i browser under exclusive lock (Weld/Lock path).
-2. Proxy path meterar trafik och kan blockas av Kill Switch.
-3. Metadata only till server (masked, spend, kill status).
+1. Plaintext keys stannar i browser under exclusive lock.
+2. Proxy meterar trafik och blockas av Kill Switch (`x-bc-killed: 1`).
+3. Metadata only till server.
 
 ## Stack
 
-Next.js App Router · TypeScript · Tailwind · IndexedDB · WebCrypto · Web Locks · Service Worker · Vercel PWA
+Next.js App Router · TypeScript · Tailwind · IndexedDB · WebCrypto · Web Locks · Edge middleware · Vercel PWA
 
 ## Try
 
-1. Open production URL in **Chrome/Edge**
-2. Weld a `.env` (paste or file)
+1. Open production in **Chrome/Edge**
+2. Weld `.env`
 3. Prove lock
-4. Kill Switch 2.0 → **Simulate $10k spike** → KILLED
-5. Vacuum · Drop Trap
+4. **Simulate $10k spike** → KILLED
+5. `POST /api/proxy/openai` with `x-bc-killed: 1` → **402**
+6. VACUUM · DROP TRAP · trap key → **451**
 
 ## Pricing
 
