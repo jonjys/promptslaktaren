@@ -82,7 +82,7 @@ export async function rotateAll(
       });
       await rotateOne(key);
       done += 1;
-      onProgress?({
+      onProgress?.({
         done,
         total,
         current: key.name,
