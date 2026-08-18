@@ -1,12 +1,12 @@
 /**
- * BridgeControl Stripe metering helpers (demo / local-first).
- * Real Stripe metered billing wires via STRIPE_SECRET_KEY on Edge later.
+ * Stripe metered helpers — local ledger + server header contract.
+ * Live STRIPE_SECRET_KEY is set in Vercel env by operator (not in repo).
  */
 
-export const TAKE_BPS = 300; // 3.00%
+export const TAKE_BPS = 300; // 3%
 
-export function feeCents(costCents: number, takeBps = TAKE_BPS): number {
-  return Math.max(0.01, (costCents * takeBps) / 10000);
+export function feeCents(costCents: number): number {
+  return Math.round((costCents * TAKE_BPS) / 10_000);
 }
 
 export type MeterRecord = {
@@ -47,7 +47,6 @@ export function listMeterLocal(): MeterRecord[] {
   }
 }
 
-/** Server-side response helper for proxy routes */
 export function meterHeaders(costCents: number): HeadersInit {
   const fee = feeCents(costCents);
   return {
@@ -55,4 +54,23 @@ export function meterHeaders(costCents: number): HeadersInit {
     "x-bc-fee-cents": String(fee),
     "x-bc-take-bps": String(TAKE_BPS),
   };
+}
+
+export type UsageRecordPayload = {
+  subscriptionItemId: string;
+  quantity: number;
+  timestamp?: number;
+  action?: "increment" | "set";
+};
+
+export function buildUsageRecordBody(p: UsageRecordPayload): Record<string, string> {
+  return {
+    quantity: String(p.quantity),
+    timestamp: String(p.timestamp ?? Math.floor(Date.now() / 1000)),
+    action: p.action || "increment",
+  };
+}
+
+export function billingPortalHint(): string {
+  return "/api/billing/portal";
 }
