@@ -8,6 +8,12 @@ import LogRiverCard from "@/components/LogRiverCard";
 import KillSwitchPro from "@/components/KillSwitchPro";
 import VacuumTrapPanel from "@/components/VacuumTrapPanel";
 import ProxyStatusCard from "@/components/ProxyStatusCard";
+import BillingAggregatorCard from "@/components/BillingAggregatorCard";
+import RotateAllButton from "@/components/RotateAllButton";
+import GhostSonarCard from "@/components/GhostSonarCard";
+import WebhookProxyCard from "@/components/WebhookProxyCard";
+import RetryTrapCard from "@/components/RetryTrapCard";
+import { getAggregatedBill } from "@/lib/billing-aggregator";
 import {
   pickAndImportEnv,
   importEnvText,
@@ -34,6 +40,7 @@ export default function Home() {
   const [cfg, setCfg] = useState<RadarConfig | null>(null);
   const [spend, setSpend] = useState(0);
   const [events, setEvents] = useState<UsageEvent[]>([]);
+  const [estBillCents, setEstBillCents] = useState(0);
 
   const refresh = useCallback(async () => {
     try {
@@ -51,6 +58,11 @@ export default function Home() {
   useEffect(() => {
     void registerBridgeSW();
     void refresh();
+    try {
+      setEstBillCents(getAggregatedBill().totalCents);
+    } catch {
+      /* ignore */
+    }
   }, [refresh]);
 
   const totalCalls = useMemo(
@@ -133,6 +145,9 @@ export default function Home() {
             ) : (
               <span className="text-zinc-500">
                 {totalCalls} · ${(spend / 100).toFixed(2)}
+                {estBillCents > 0 && (
+                  <span className="text-[#00FF88]/80"> · est ${(estBillCents / 100).toFixed(2)}/mo</span>
+                )}
               </span>
             )}
           </div>
@@ -156,8 +171,7 @@ export default function Home() {
             <span className="text-[#00FF88]">Spend never surprises.</span>
           </h1>
           <p className="text-sm sm:text-lg text-zinc-400 max-w-xl mx-auto">
-            Secret-slussen. Weld on-device. Lock exclusive. Kill graphs budget.
-            Proxy meters 3%.
+            Secret-slussen. Weld on-device. Lock exclusive. Kill graphs budget. Proxy meters 3%.
           </p>
         </section>
 
@@ -175,25 +189,27 @@ export default function Home() {
           ))}
         </section>
 
+        <BillingAggregatorCard onTotalChange={setEstBillCents} />
+
         <KillSwitchPro onLog={(m) => setLog(m)} onRefresh={refresh} />
 
         <VacuumTrapPanel onLog={(m) => setLog(m)} />
 
         <ProxyStatusCard />
 
+        <GhostSonarCard />
+
+        <WebhookProxyCard />
+
+        <RetryTrapCard />
+
         {events.length > 0 && (
           <section className="border border-zinc-900 bg-zinc-950/80 p-3 sm:p-4">
             <h3 className="text-xs font-mono text-zinc-500 mb-2">Recent usage</h3>
             <ul className="space-y-1 max-h-28 overflow-y-auto">
               {events.map((e) => (
-                <li
-                  key={e.id}
-                  className="text-[11px] font-mono text-zinc-500 flex justify-between gap-2"
-                >
-                  <span className="truncate">
-                    {e.provider}
-                    {e.note ? ` · ${e.note}` : ""}
-                  </span>
+                <li key={e.id} className="text-[11px] font-mono text-zinc-500 flex justify-between gap-2">
+                  <span className="truncate">{e.provider}{e.note ? ` · ${e.note}` : ""}</span>
                   <span className="shrink-0">~${(e.estimatedCents / 100).toFixed(2)}</span>
                 </li>
               ))}
@@ -202,102 +218,52 @@ export default function Home() {
         )}
 
         <section className="border border-zinc-800 bg-zinc-950 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-white mb-3">Weld .env</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h2 className="text-base sm:text-lg font-semibold text-white">Weld .env</h2>
+            <RotateAllButton keyCount={keys.length || 47} disabled={busy} onDone={() => void refresh()} />
+          </div>
           <div className="flex flex-col gap-3 mb-3">
-            <button
-              type="button"
-              onClick={onImportFile}
-              disabled={busy}
-              className="min-h-12 w-full px-6 py-3 bg-[#00FF88] text-black font-bold text-sm disabled:opacity-50"
-            >
+            <button type="button" onClick={onImportFile} disabled={busy} className="min-h-12 w-full px-6 py-3 bg-[#00FF88] text-black font-bold text-sm disabled:opacity-50">
               {busy ? "Working…" : "Import .env"}
             </button>
             <p className="text-zinc-600 text-xs">Chrome / Edge · File System Access · eller klistra nedan</p>
           </div>
-          <textarea
-            value={paste}
-            onChange={(e) => setPaste(e.target.value)}
-            placeholder={"STRIPE_SECRET_KEY=sk_test_...\nOPENAI_API_KEY=sk-..."}
-            className="w-full h-28 bg-black border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-[#00FF88]"
-          />
-          <button
-            type="button"
-            onClick={onImportPaste}
-            disabled={busy || !paste.trim()}
-            className="mt-3 min-h-11 w-full sm:w-auto px-4 py-2.5 border border-zinc-700 text-zinc-300 text-sm hover:border-[#00FF88] disabled:opacity-40"
-          >
+          <textarea value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={"STRIPE_SECRET_KEY=sk_test_...\nOPENAI_API_KEY=sk-..."} className="w-full h-28 bg-black border border-zinc-800 text-zinc-300 text-sm p-3 font-mono focus:outline-none focus:border-[#00FF88]" />
+          <button type="button" onClick={onImportPaste} disabled={busy || !paste.trim()} className="mt-3 min-h-11 w-full sm:w-auto px-4 py-2.5 border border-zinc-700 text-zinc-300 text-sm hover:border-[#00FF88] disabled:opacity-40">
             Weld pasted keys
           </button>
           {status && <p className="mt-3 text-sm text-[#00FF88]">{status}</p>}
         </section>
 
         <section>
-          <h2 className="text-base sm:text-lg font-semibold text-white mb-3">
-            Secured keys (this device)
-          </h2>
+          <h2 className="text-base sm:text-lg font-semibold text-white mb-3">Secured keys (this device)</h2>
           {keys.length === 0 ? (
             <p className="text-zinc-500 text-sm">No keys. Weld a .env.</p>
           ) : (
             <ul className="space-y-2">
               {keys.map((k) => (
-                <li
-                  key={k.id}
-                  className="border border-zinc-800 bg-black px-3 sm:px-4 py-3 space-y-2"
-                >
+                <li key={k.id} className="border border-zinc-800 bg-black px-3 sm:px-4 py-3 space-y-2">
                   <div className="min-w-0">
                     <div className="font-medium text-zinc-200 truncate text-sm">{k.name}</div>
-                    <div className="text-[11px] text-zinc-500 font-mono">
-                      {k.provider} · {k.masked} · {k.usageCount}x
-                    </div>
+                    <div className="text-[11px] text-zinc-500 font-mono">{k.provider} · {k.masked} · {k.usageCount}x</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onProve(k)}
-                      disabled={busy || !!cfg?.killed}
-                      className="min-h-10 flex-1 sm:flex-none text-xs px-3 py-2 bg-zinc-900 text-[#00FF88] border border-[#00FF88]/30 disabled:opacity-30"
-                    >
-                      Prove lock
-                    </button>
-                    <BurnCard
-                      keyId={k.id}
-                      keyName={k.name}
-                      disabled={busy}
-                      onLog={(m) => setLog(m)}
-                      onBurned={(msg) => {
-                        setLog(msg);
-                        void refresh();
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await deleteKey(k.id);
-                        await refresh();
-                      }}
-                      className="min-h-10 text-xs px-3 text-zinc-500 hover:text-red-400"
-                    >
-                      Remove
-                    </button>
+                    <button type="button" onClick={() => onProve(k)} disabled={busy || !!cfg?.killed} className="min-h-10 flex-1 sm:flex-none text-xs px-3 py-2 bg-zinc-900 text-[#00FF88] border border-[#00FF88]/30 disabled:opacity-30">Prove lock</button>
+                    <BurnCard keyId={k.id} keyName={k.name} disabled={busy} onLog={(m) => setLog(m)} onBurned={(msg) => { setLog(msg); void refresh(); }} />
+                    <button type="button" onClick={async () => { await deleteKey(k.id); await refresh(); }} className="min-h-10 text-xs px-3 text-zinc-500 hover:text-red-400">Remove</button>
                   </div>
                 </li>
               ))}
             </ul>
           )}
           {log && (
-            <pre className="mt-4 text-[11px] text-[#00FF88]/90 bg-zinc-950 border border-zinc-800 p-3 whitespace-pre-wrap font-mono break-words">
-              {log}
-            </pre>
+            <pre className="mt-4 text-[11px] text-[#00FF88]/90 bg-zinc-950 border border-zinc-800 p-3 whitespace-pre-wrap font-mono break-words">{log}</pre>
           )}
         </section>
 
         <section className="border border-zinc-800 p-4 sm:p-6">
-          <h2 className="text-base sm:text-lg font-semibold text-white mb-2 text-center">
-            BridgeControl Black — $299/mo
-          </h2>
-          <p className="text-center text-xs sm:text-sm text-zinc-400 mb-4">
-            Infrastructure · <span className="text-[#00FF88]">3% take</span> on proxied spend
-          </p>
+          <h2 className="text-base sm:text-lg font-semibold text-white mb-2 text-center">BridgeControl Black — $299/mo</h2>
+          <p className="text-center text-xs sm:text-sm text-zinc-400 mb-4">Infrastructure · <span className="text-[#00FF88]">3% take</span> on proxied spend</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
             {[
               { name: "Core", price: "Free", d: "Weld · Lock · Kill local" },
@@ -315,12 +281,8 @@ export default function Home() {
 
         <div className="border-t border-[#00FF88]/30 pt-6 space-y-4">
           <div className="border border-[#00FF88] bg-[#00FF88]/5 p-3 text-center sm:text-left sm:flex sm:justify-between sm:items-center gap-2">
-            <span className="text-[#00FF88] font-bold text-[10px] sm:text-xs tracking-widest block">
-              BRIDGECONTROL BLACK · 3% TAKE
-            </span>
-            <span className="text-[#00FF88]/70 text-[10px] sm:text-xs block mt-1 sm:mt-0">
-              /api/proxy · spend_ledger · kill gate
-            </span>
+            <span className="text-[#00FF88] font-bold text-[10px] sm:text-xs tracking-widest block">BRIDGECONTROL BLACK · 3% TAKE</span>
+            <span className="text-[#00FF88]/70 text-[10px] sm:text-xs block mt-1 sm:mt-0">/api/proxy · spend_ledger · kill gate</span>
           </div>
           <PayGateCard />
           <LogRiverCard />
@@ -328,7 +290,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-zinc-900 py-6 text-center text-xs text-zinc-600 px-3">
-        BridgeControl · keys never leave · 3% take
+        BridgeControl · keys never leave · 3% take · embed-ready for fred-platform /core
       </footer>
     </div>
   );
