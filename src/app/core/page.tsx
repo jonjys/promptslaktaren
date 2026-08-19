@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CORE_NAV } from "@/components/core/CoreSidebarNav";
+import { CORE_NAV } from "@/lib/core-nav";
 
 export default function CorePage() {
   return (
