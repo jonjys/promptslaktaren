@@ -1,0 +1,12 @@
+﻿create table if not exists herd_facets (id uuid primary key default gen_random_uuid(), org_id text default 'default', fingerprint text not null, kind text check (kind in ('REAL','RETRY','ECHO')), created_at timestamptz default now());
+create table if not exists prism_verdicts (id uuid primary key default gen_random_uuid(), org_id text default 'default', request_id text, verdict text, saved_cents int default 0, created_at timestamptz default now());
+create table if not exists token_leases (id uuid primary key default gen_random_uuid(), org_id text default 'default', key_id text, provider text, lease_token text unique, expires_at timestamptz default now() + interval '60 seconds');
+create table if not exists lease_breaches (id uuid primary key default gen_random_uuid(), org_id text default 'default', key_id text, reason text, created_at timestamptz default now());
+create table if not exists egress_fingerprints (fingerprint text primary key, body_hash text, count int default 1, first_seen timestamptz default now());
+create table if not exists drain_savings (id uuid primary key default gen_random_uuid(), org_id text default 'default', fingerprint text, saved_bytes int default 0, fee_cents int default 0, created_at timestamptz default now());
+create table if not exists hook_offsets (key_id text primary key, offset_ms int default 0, updated_at timestamptz default now());
+create table if not exists herd_events (id uuid primary key default gen_random_uuid(), org_id text default 'default', provider text, burst_size int, created_at timestamptz default now());
+alter table spend_ledger add column if not exists take_bps int default 300;
+alter table spend_ledger add column if not exists take_label text;
+alter table usage_events add column if not exists pressure_state text;
+alter table usage_events add column if not exists gpu_ms int;
