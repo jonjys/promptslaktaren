@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -45,7 +46,7 @@ export function CoreSidebarNav({ layout }: { layout: "sidebar" | "topbar" }) {
     >
       {CORE_NAV.map((item) => {
         const active = isActive(pathname, item.href);
-        const style: React.CSSProperties = {
+        const style: CSSProperties = {
           display: "flex",
           alignItems: "center",
           gap: "10px",
